@@ -11,6 +11,10 @@
 - 💾 **智慧快取**：使用 IndexedDB + localStorage 雙層快取策略
 - ⚡ **離線支援**：斷網環境下仍可進行本地查詢
 - 📊 **統計分析**：提供豐富的車輛統計和分析功能
+- 📝 **申請者建檔系統**：多步驟車輛申請表單與審核流程
+- ✅ **即時表單驗證**：台灣身分證、手機號碼等格式驗證
+- 📧 **自動通知系統**：電子郵件申請確認與審核結果通知
+- 👥 **管理員介面**：完整的申請審核與狀態管理功能
 
 ## 🛠️ 技術架構
 
@@ -74,19 +78,46 @@ http://localhost:3000/query/ABC-1234
 
 ### API 使用
 
-#### 取得所有車輛
+#### 車輛查詢 API
+
 ```bash
+# 取得所有車輛
 GET /api/vehicles
-```
 
-#### 搜尋車輛
-```bash
-GET /api/vehicles/search?q=ABC
-```
+# 搜尋車輛
+GET /api/vehicles/search?q=ABC&type=轎車&status=審核通過
 
-#### 查詢特定車牌
-```bash
+# 查詢特定車牌
 GET /api/vehicles/ABC-1234
+```
+
+#### 車輛申請 API
+
+```bash
+# 提交新申請
+POST /api/applications
+Content-Type: application/json
+
+{
+  "plate": "ABC-1234",
+  "vehicleType": "轎車",
+  "applicantName": "王小明",
+  "applicantEmail": "user@example.com",
+  "contactPhone": "0912345678",
+  "identityType": "同仁"
+}
+
+# 取得申請列表（管理員）
+GET /api/applications
+
+# 審核申請（管理員）
+PUT /api/applications/123
+Content-Type: application/json
+
+{
+  "action": "approve", // 或 "reject"
+  "notes": "審核備註"
+}
 ```
 
 ## 🔧 開發指令
@@ -114,14 +145,52 @@ npm run lint
 
 ## 🚀 部署
 
-最簡單的部署方式是使用 [Vercel Platform](https://vercel.com/new)：
+### 自動部署到 Vercel（推薦）
+
+1. **前往 Vercel 並連接 GitHub**
+   - 訪問 [vercel.com/new](https://vercel.com/new)
+   - 使用 GitHub 帳號登入
+   - 選擇 `boyam01/parkingsearch` 儲存庫
+   - 點擊 "Deploy"
+
+2. **Vercel 會自動處理**
+   - 自動偵測 Next.js 專案
+   - 安裝依賴並建置
+   - 部署到全球 CDN
+
+3. **取得部署 URL**
+   - 部署完成後會獲得類似 `https://parkingsearch-xxx.vercel.app` 的網址
+   - 每次推送程式碼到 `main` 分支都會自動重新部署
+
+### 手動部署（使用 Vercel CLI）
 
 ```bash
 # 安裝 Vercel CLI
 npm i -g vercel
 
+# 登入 Vercel
+vercel login
+
 # 部署
 vercel
+
+# 部署到生產環境
+vercel --prod
+```
+
+### 環境變數設定
+
+在 Vercel Dashboard 中設定以下環境變數：
+
+```env
+# API 基礎 URL（生產環境會自動設定）
+NEXT_PUBLIC_API_BASE_URL=https://your-app.vercel.app/api
+
+# 可選：郵件服務配置
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
 ```
 
 ## 🤝 貢獻
