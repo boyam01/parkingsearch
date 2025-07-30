@@ -261,7 +261,7 @@ export function SelfApplicationForm({
             type="text"
             value={formData.plate}
             onChange={(e) => updateField('plate', e.target.value.toUpperCase())}
-            placeholder="例：ABC-1234"
+            placeholder="請輸入車牌號碼"
             className={cn(
               'w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
               errors.plate ? 'border-red-500' : 'border-gray-300'

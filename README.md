@@ -73,7 +73,9 @@ NEXT_PUBLIC_RAGIC_API_KEY=your_api_key
 ### 直接查詢
 透過動態路由直接查詢特定車牌：
 ```
-http://localhost:3000/query/ABC-1234
+http://localhost:3000/query/ABC1234
+http://localhost:3000/query/XYZ-5678
+http://localhost:3000/query/123ABC
 ```
 
 ### API 使用

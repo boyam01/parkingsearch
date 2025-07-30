@@ -23,18 +23,18 @@ export function validateTaiwanId(id: string): boolean {
   return (sum + checkDigit) % 10 === 0;
 }
 
-// 車牌號碼驗證（台灣格式）
+// 車牌號碼驗證（不限定格式）
 export function validatePlateNumber(plate: string): boolean {
-  const cleanPlate = plate.replace(/[-\s]/g, '').toUpperCase();
+  // 移除空白字元後檢查
+  const cleanPlate = plate.trim();
   
-  // 台灣車牌格式
-  const patterns = [
-    /^[A-Z]{2,3}\d{3,4}$/, // 一般車牌 AB1234 或 ABC123
-    /^[A-Z]{2}\d{2}[A-Z]{2}$/, // 機車 AB12CD
-    /^\d{3}[A-Z]{2}$/, // 老式車牌 123AB
-  ];
+  // 只要不是空字串且長度在合理範圍內就接受
+  if (cleanPlate.length === 0) return false;
+  if (cleanPlate.length > 20) return false; // 防止過長的輸入
   
-  return patterns.some(pattern => pattern.test(cleanPlate));
+  // 可以包含英文字母、數字、連字號、空格
+  const validCharPattern = /^[A-Za-z0-9\-\s]+$/;
+  return validCharPattern.test(cleanPlate);
 }
 
 // 電話號碼驗證（台灣格式）
@@ -79,7 +79,7 @@ export const validationRules: Record<keyof ApplicationFormData, ValidationRule> 
   plate: {
     required: true,
     customValidator: validatePlateNumber,
-    errorMessage: '請輸入有效的車牌號碼（例：ABC-1234）'
+    errorMessage: '請輸入車牌號碼（可包含英文、數字、連字號）'
   },
   vehicleType: {
     required: true,

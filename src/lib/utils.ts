@@ -17,19 +17,18 @@ export function normalizePlate(plate: string): string {
   return plate.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-// 驗證車牌號碼格式
+// 驗證車牌號碼格式（不限定格式）
 export function validatePlate(plate: string): boolean {
-  const normalizedPlate = plate.replace(/[^A-Z0-9]/gi, '');
+  // 移除空白字元後檢查
+  const cleanPlate = plate.trim();
   
-  // 台灣車牌格式：3個英文字母 + 4個數字 或 2個英文字母 + 4個數字
-  const patterns = [
-    /^[A-Z]{3}[0-9]{4}$/i,  // ABC1234
-    /^[A-Z]{2}[0-9]{4}$/i,  // AB1234
-    /^[0-9]{3}[A-Z]{2}$/i,  // 123AB (機車)
-    /^[0-9]{2}[A-Z]{2}$/i,  // 12AB (機車)
-  ];
-
-  return patterns.some(pattern => pattern.test(normalizedPlate));
+  // 只要不是空字串且長度在合理範圍內就接受
+  if (cleanPlate.length === 0) return false;
+  if (cleanPlate.length > 20) return false; // 防止過長的輸入
+  
+  // 可以包含英文字母、數字、連字號、空格
+  const validCharPattern = /^[A-Za-z0-9\-\s]+$/;
+  return validCharPattern.test(cleanPlate);
 }
 
 // 格式化電話號碼

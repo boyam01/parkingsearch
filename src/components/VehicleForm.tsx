@@ -209,12 +209,12 @@ export function VehicleForm({
                 type="text"
                 value={formData.plate}
                 onChange={(e) => handleInputChange('plate', e.target.value.toUpperCase())}
-                placeholder="例：ABC-1234"
+                placeholder="請輸入車牌號碼"
                 className={cn(
                   'w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
                   errors.plate ? 'border-red-300' : 'border-gray-300'
                 )}
-                maxLength={10}
+                maxLength={20}
               />
               {errors.plate && (
                 <p className="mt-1 text-sm text-red-600">{errors.plate}</p>
