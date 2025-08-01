@@ -1,23 +1,7 @@
-# Netlify 部署配置
+# Netlify 部署配置 - Next.js 專用
 [build]
   command = "npm run build"
-  
-# 環境變數
+  publish = ".next"
+
 [build.environment]
   NODE_VERSION = "18"
-
-# 重寫規則，讓 Next.js 正常運作
-[[redirects]]
-  from = "/_next/static/*"
-  to = "/static/:splat"
-  status = 200
-
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/nextjs/:splat"
-  status = 200
-
-[[redirects]]  
-  from = "/*"
-  to = "/index.html"
-  status = 200
