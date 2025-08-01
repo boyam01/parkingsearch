@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
 
     // 從 Ragic 取得會員資料
     const ragicResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_RAGIC_BASE_URL}/${process.env.NEXT_PUBLIC_RAGIC_ACCOUNT}/ragicforms32/7?api&APIKey=${process.env.NEXT_PUBLIC_RAGIC_API_KEY}`,
+      `${process.env.NEXT_PUBLIC_RAGIC_BASE_URL}/${process.env.NEXT_PUBLIC_RAGIC_ACCOUNT}/ragicforms32/7?api&APIKey=${process.env.NEXT_PUBLIC_RAGIC_API_KEY?.trim()}`,
       {
         method: 'GET',
         headers: {
@@ -224,7 +224,7 @@ export async function POST(request: NextRequest) {
     
     // 提交到 Ragic
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_RAGIC_BASE_URL}/${process.env.NEXT_PUBLIC_RAGIC_ACCOUNT}/ragicforms32/7?api&APIKey=${process.env.NEXT_PUBLIC_RAGIC_API_KEY}`,
+      `${process.env.NEXT_PUBLIC_RAGIC_BASE_URL}/${process.env.NEXT_PUBLIC_RAGIC_ACCOUNT}/ragicforms32/7?api&APIKey=${process.env.NEXT_PUBLIC_RAGIC_API_KEY?.trim()}`,
       {
         method: 'POST',
         headers: {

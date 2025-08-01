@@ -66,7 +66,7 @@ export async function GET(
     
     const response = await fetch(url, {
       headers: {
-        'Authorization': `Basic ${RAGIC_MONTHLY_PARKING_CONFIG.apiKey}`,
+        'Authorization': `Basic ${RAGIC_MONTHLY_PARKING_CONFIG.apiKey?.trim()}`,
         'Content-Type': 'application/json'
       }
     });
@@ -130,7 +130,7 @@ export async function PUT(
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${RAGIC_MONTHLY_PARKING_CONFIG.apiKey}`,
+        'Authorization': `Basic ${RAGIC_MONTHLY_PARKING_CONFIG.apiKey?.trim()}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(ragicData)
@@ -172,7 +172,7 @@ export async function DELETE(
     const response = await fetch(url, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Basic ${RAGIC_MONTHLY_PARKING_CONFIG.apiKey}`,
+        'Authorization': `Basic ${RAGIC_MONTHLY_PARKING_CONFIG.apiKey?.trim()}`,
         'Content-Type': 'application/json'
       }
     });
