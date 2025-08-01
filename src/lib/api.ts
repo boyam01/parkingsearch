@@ -359,36 +359,84 @@ export class RagicAPI {
   }
 
   static async createRecord(vehicle: Partial<VehicleRecord>): Promise<VehicleRecord> {
+    console.log('🔥 強制寫入 Ragic 記錄開始');
+    console.log('原始車輛資料:', vehicle);
+    
     try {
       const ragicData = this.transformToRagicFormat(vehicle);
+      console.log('轉換後的 Ragic 格式:', ragicData);
+      
       const apiKey = this.apiKey || '';
-      // 新增記錄使用 subtable ID，不是 addRecordId
+      if (!apiKey) {
+        throw new Error('RAGIC_API_KEY 未設定');
+      }
+      
+      // 強制使用正確的 Ragic API 端點
       const url = `${this.baseURL}/${this.accountName}/ragicforms${this.formId}/${this.subtableId}?api&APIKey=${encodeURIComponent(apiKey)}`;
+      console.log('🚀 強制寫入 URL:', url);
       
-      console.log('建立 Ragic 記錄 URL:', url);
-      console.log('建立資料:', ragicData);
+      // 多重嘗試寫入機制
+      let response: Response;
+      let attempts = 0;
+      const maxAttempts = 3;
       
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json',
-        },
-        body: new URLSearchParams(ragicData).toString()
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('建立失敗回應:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
+      while (attempts < maxAttempts) {
+        attempts++;
+        console.log(`📝 嘗試寫入第 ${attempts} 次...`);
+        
+        try {
+          response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Accept': 'application/json',
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            },
+            body: new URLSearchParams(ragicData).toString()
+          });
+          
+          console.log(`📊 第 ${attempts} 次回應狀態:`, response.status);
+          
+          if (response.ok) {
+            break; // 成功就跳出迴圈
+          } else if (attempts < maxAttempts) {
+            console.warn(`⚠️ 第 ${attempts} 次寫入失敗，準備重試...`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // 遞增延遲
+            continue;
+          }
+        } catch (fetchError) {
+          console.error(`❌ 第 ${attempts} 次網路錯誤:`, fetchError);
+          if (attempts >= maxAttempts) {
+            throw fetchError;
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+        }
       }
 
-      const data = await response.json();
-      console.log('建立成功回應:', data);
-      return this.transformRagicData([data])[0];
+      if (!response!.ok) {
+        const errorText = await response!.text();
+        console.error('💥 最終寫入失敗回應:', errorText);
+        throw new Error(`強制寫入失敗! HTTP ${response!.status}: ${errorText}`);
+      }
+
+      const data = await response!.json();
+      console.log('✅ 強制寫入成功回應:', data);
+      
+      // 強制轉換並驗證資料
+      const transformedData = this.transformRagicData([data]);
+      if (transformedData.length === 0) {
+        throw new Error('資料轉換失敗，無法取得寫入結果');
+      }
+      
+      const result = transformedData[0];
+      console.log('🎉 強制寫入完成，最終結果:', result);
+      
+      return result;
     } catch (error) {
-      console.error('建立 Ragic 記錄錯誤:', error);
-      throw error;
+      console.error('💀 強制寫入 Ragic 記錄徹底失敗:', error);
+      // 重新拋出錯誤，不允許靜默失敗
+      throw new Error(`強制寫入失敗: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

@@ -38,6 +38,12 @@ const navItems: NavItem[] = [
     description: '申請月租車位'
   },
   {
+    href: '/force-write',
+    label: '🔥 強制寫入',
+    icon: Settings,
+    description: '測試強制寫入 Ragic 資料庫'
+  },
+  {
     href: '/management',
     label: '資料管理',
     icon: Settings,

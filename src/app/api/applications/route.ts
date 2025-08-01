@@ -46,8 +46,26 @@ export async function POST(request: NextRequest) {
       userAgent: request.headers.get('user-agent') || 'unknown'
     };
 
-    // 儲存申請資料到 Ragic
-    const savedApplication = await RagicAPI.createRecord(fullApplicationData);
+    console.log('🔥 強制寫入申請資料到 Ragic...');
+    console.log('完整申請資料:', fullApplicationData);
+
+    // 強制儲存申請資料到 Ragic - 不允許失敗
+    let savedApplication: VehicleRecord;
+    try {
+      savedApplication = await RagicAPI.createRecord(fullApplicationData);
+      console.log('✅ 強制寫入成功！', savedApplication);
+    } catch (ragicError) {
+      console.error('💥 Ragic 寫入失敗:', ragicError);
+      
+      // 即使 Ragic 寫入失敗也要回報明確錯誤
+      return NextResponse.json<ApplicationResponse>({
+        success: false,
+        message: `資料寫入失敗: ${ragicError instanceof Error ? ragicError.message : String(ragicError)}`,
+        errors: { 
+          system: '無法將申請資料寫入資料庫，請檢查 Ragic 連線或聯繫管理員' 
+        }
+      }, { status: 500 });
+    }
 
     // 發送通知
     try {
