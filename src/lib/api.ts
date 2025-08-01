@@ -433,32 +433,40 @@ export class RagicAPI {
   }
 
   private static transformRagicData(ragicData: any): VehicleRecord[] {
-    console.log('轉換 Ragic 資料:', ragicData);
+    console.log('原始 Ragic 資料:', ragicData);
+    console.log('資料類型:', typeof ragicData);
+    console.log('是否為陣列:', Array.isArray(ragicData));
     
     // 根據 Ragic 的資料結構進行轉換
     if (!ragicData) {
+      console.log('無資料返回空陣列');
       return [];
     }
 
     // 將物件轉換為陣列
     const dataArray = Array.isArray(ragicData) ? ragicData : Object.values(ragicData);
+    console.log('轉換後的資料陣列:', dataArray);
+    console.log('陣列長度:', dataArray.length);
 
     return dataArray.map((item: any, index: number) => {
+      console.log(`處理第 ${index} 筆資料:`, item);
+      console.log('可用的欄位:', Object.keys(item));
+      
       const record: VehicleRecord = {
         id: item._ragicId?.toString() || index.toString(),
         // 使用正確的 Ragic 欄位編號
         plate: item['1003984'] || '',  // 車牌號碼
         vehicleType: this.mapVehicleType(item['1003988'] || ''),  // 車輛類型
         applicantName: item['1003990'] || '',  // 申請人姓名
-        contactPhone: item['1003992'] || '',  // 聯絡電話
+        contactPhone: item['1003991'] || '',  // 聯絡電話
         identityType: this.mapIdentityType(item['1003989'] || ''),  // 身分類別
-        applicationDate: this.formatDate(item['1003994'] || ''),  // 申請日期
-        visitTime: item['1003986'] || '',  // 到訪時間
-        brand: item['1003991'] || '',  // 車輛品牌
-        color: item['1003993'] || '',  // 車輛顏色
-        department: item['1003995'] || '',  // 部門
-        approvalStatus: 'pending',  // 預設狀態
-        notes: '',  // 備註欄位編號未知，暫時留空
+        applicationDate: this.formatDate(item['1003992'] || ''),  // 申請日期
+        visitTime: item['1003993'] || '',  // 到訪時間
+        brand: item['1003985'] || '',  // 車輛品牌
+        color: item['1003986'] || '',  // 車輛顏色
+        department: item['1003994'] || '',  // 部門單位
+        approvalStatus: this.mapApprovalStatus(item['1003987'] || ''),  // 審核狀態
+        notes: item['1003995'] || '',  // 備註
         // 申請系統相關欄位 (這些可能需要其他 Ragic 欄位編號)
         applicantEmail: '',
         applicantId: '',
