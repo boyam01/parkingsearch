@@ -286,6 +286,10 @@ export default function TestPage() {
               </div>
             </div>
           </div>
+
+          {/* 錯誤顯示 */}
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
               <div className="text-red-700 font-semibold">錯誤訊息:</div>
               <div className="text-red-600">{error}</div>
             </div>
