@@ -52,7 +52,11 @@ export class QuotaManagementService {
   async calculateQuotaStatus(): Promise<QuotaStatus> {
     try {
       // 取得目前所有有效的車輛記錄
-      const response = await fetch('/api/vehicles');
+      const base = process.env.VERCEL_URL 
+        ? `https://${process.env.VERCEL_URL}` 
+        : 'http://localhost:3000';
+      
+      const response = await fetch(`${base}/api/vehicles`);
       const vehiclesData = await response.json();
       
       if (!vehiclesData.success) {

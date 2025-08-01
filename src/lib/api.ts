@@ -1,9 +1,25 @@
 import axios from 'axios';
 import { VehicleRecord, ApiResponse } from '@/types/vehicle';
 
+// 獲取基礎 URL
+const getBaseURL = () => {
+  if (typeof window !== 'undefined') {
+    // 客戶端使用相對路徑
+    return '/api';
+  }
+  
+  // 服務端使用完整 URL
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}/api`;
+  }
+  
+  // 本地開發環境
+  return 'http://localhost:3000/api';
+};
+
 // API 基礎設定
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: getBaseURL(),
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

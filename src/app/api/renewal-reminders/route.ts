@@ -42,7 +42,11 @@ export class RenewalReminderService {
   async checkExpiringRecords(): Promise<void> {
     try {
       // 取得所有活躍的月租車記錄
-      const response = await fetch('/api/monthly-parking?status=active');
+      const base = process.env.VERCEL_URL 
+        ? `https://${process.env.VERCEL_URL}` 
+        : 'http://localhost:3000';
+      
+      const response = await fetch(`${base}/api/monthly-parking?status=active`);
       const data = await response.json();
       
       if (!data.success) {
