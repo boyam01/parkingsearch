@@ -516,19 +516,19 @@ export class RagicAPI {
       
       const record: VehicleRecord = {
         id: item._ragicId?.toString() || index.toString(),
-        // 使用正確的 Ragic 欄位編號
+        // 使用您提供的正確 Ragic 欄位編號
         plate: item['1003984'] || '',  // 車牌號碼
         vehicleType: this.mapVehicleType(item['1003988'] || ''),  // 車輛類型
         applicantName: item['1003990'] || '',  // 申請人姓名
-        contactPhone: item['1003991'] || '',  // 聯絡電話
+        contactPhone: item['1003992'] || '',  // 聯絡電話
         identityType: this.mapIdentityType(item['1003989'] || ''),  // 身分類別
-        applicationDate: this.formatDate(item['1003992'] || ''),  // 申請日期
-        visitTime: item['1003993'] || '',  // 到訪時間
-        brand: item['1003985'] || '',  // 車輛品牌
-        color: item['1003986'] || '',  // 車輛顏色
-        department: item['1003994'] || '',  // 部門單位
-        approvalStatus: this.mapApprovalStatus(item['1003987'] || ''),  // 審核狀態
-        notes: item['1003995'] || '',  // 備註
+        applicationDate: this.formatDate(item['1003994'] || ''),  // 申請日期
+        visitTime: item['1003986'] || '',  // 到訪時間
+        brand: item['1003991'] || '',  // 車輛品牌
+        color: '',  // 車輛顏色 (未提供欄位編號)
+        department: item['1003995'] || '',  // 部門
+        approvalStatus: 'pending',  // 審核狀態 (未提供欄位編號，預設為 pending)
+        notes: '',  // 備註 (未提供欄位編號)
         // 申請系統相關欄位 (這些可能需要其他 Ragic 欄位編號)
         applicantEmail: '',
         applicantId: '',
@@ -651,11 +651,6 @@ export class RagicAPI {
     // 聯絡電話 (1003992) - 必填
     if (vehicle.contactPhone) {
       ragicData['1003992'] = vehicle.contactPhone;
-    }
-    
-    // 車輛顏色 (1003993)
-    if (vehicle.color) {
-      ragicData['1003993'] = vehicle.color;
     }
     
     // 申請日期 (1003994) - 必填，轉換為 yyyy/MM/dd 格式
