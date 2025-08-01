@@ -3,6 +3,14 @@ import { RagicAPI } from '@/lib/api';
 
 // POST /api/test-ragic - 測試 Ragic API 連接
 export async function POST(request: NextRequest) {
+  // 只在非生產環境執行測試
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({
+      success: false,
+      message: '測試 API 在生產環境中不可用'
+    }, { status: 403 });
+  }
+
   try {
     const { apiKey, action } = await request.json();
     
@@ -82,6 +90,14 @@ export async function POST(request: NextRequest) {
 
 // GET /api/test-ragic - 測試 Ragic 讀取功能
 export async function GET(request: NextRequest) {
+  // 只在非生產環境執行測試
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({
+      success: false,
+      message: '測試 API 在生產環境中不可用'
+    }, { status: 403 });
+  }
+
   try {
     console.log('🧪 開始測試 Ragic 讀取功能...');
     

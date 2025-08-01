@@ -12,6 +12,20 @@ import QuotaDisplay from '@/components/QuotaDisplay';
 import { Navigation } from '@/components/Navigation';
 
 export default function TestNewPage() {
+  // 只在非生產環境顯示測試頁面
+  if (process.env.NODE_ENV === 'production') {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-6xl mx-auto px-4">
+          <h1 className="text-3xl font-bold text-center mb-8">測試頁面不可用</h1>
+          <div className="bg-white rounded-lg shadow p-6">
+            <p className="text-gray-600">此測試頁面在生產環境中不可用。</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const {
     data,
     loading,

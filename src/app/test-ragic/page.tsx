@@ -10,6 +10,20 @@ export default function RagicTestPage() {
   const [error, setError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'testing' | 'success' | 'failed'>('testing');
 
+  // 只在非生產環境顯示測試頁面
+  if (process.env.NODE_ENV === 'production') {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <h1 className="text-3xl font-bold text-gray-900 mb-8">測試頁面不可用</h1>
+          <div className="bg-white rounded-lg shadow p-6">
+            <p className="text-gray-600">此測試頁面在生產環境中不可用。</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const testConnection = async () => {
     setLoading(true);
     setError(null);

@@ -4,6 +4,20 @@ import { useState, useEffect } from 'react';
 import { RagicAPI } from '@/lib/api';
 
 export default function EmergencyTest() {
+  // 只在非生產環境顯示緊急測試頁面
+  if (process.env.NODE_ENV === 'production') {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-6xl mx-auto px-4">
+          <h1 className="text-3xl font-bold text-center mb-8">緊急測試頁面不可用</h1>
+          <div className="bg-white rounded-lg shadow p-6">
+            <p className="text-gray-600">此緊急測試頁面在生產環境中不可用。</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const [testResults, setTestResults] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [plateAnalysis, setPlateAnalysis] = useState<any>(null);
