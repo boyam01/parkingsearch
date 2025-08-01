@@ -3,7 +3,7 @@ import { VehicleRecord, ApiResponse } from '@/types/vehicle';
 
 // API 基礎設定
 const api = axios.create({
-  baseURL: typeof window !== 'undefined' ? '/api' : 'http://localhost:3000/api',
+  baseURL: '/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

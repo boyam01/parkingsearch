@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
 
     // 從 Ragic 取得月租車資料
     const ragicResponse = await fetch(
-      `https://ap7.ragic.com/xinsheng/ragicforms33/8?api&APIKey=${process.env.NEXT_PUBLIC_RAGIC_API_KEY}`,
+      `${process.env.NEXT_PUBLIC_RAGIC_BASE_URL}/${process.env.NEXT_PUBLIC_RAGIC_ACCOUNT}/ragicforms33/8?api&APIKey=${process.env.NEXT_PUBLIC_RAGIC_API_KEY}`,
       {
         method: 'GET',
         headers: {
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
     
     // 提交到 Ragic
     const response = await fetch(
-      `https://ap7.ragic.com/xinsheng/ragicforms33/8?api&APIKey=${process.env.NEXT_PUBLIC_RAGIC_API_KEY}`,
+      `${process.env.NEXT_PUBLIC_RAGIC_BASE_URL}/${process.env.NEXT_PUBLIC_RAGIC_ACCOUNT}/ragicforms33/8?api&APIKey=${process.env.NEXT_PUBLIC_RAGIC_API_KEY}`,
       {
         method: 'POST',
         headers: {
