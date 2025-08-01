@@ -13,6 +13,11 @@ const getBaseURL = () => {
     return `https://${process.env.VERCEL_URL}/api`;
   }
   
+  // Railway 部署環境
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+    return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api`;
+  }
+  
   // 本地開發環境
   return 'http://localhost:3000/api';
 };

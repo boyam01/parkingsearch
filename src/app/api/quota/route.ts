@@ -54,6 +54,8 @@ export class QuotaManagementService {
       // 取得目前所有有效的車輛記錄
       const base = process.env.VERCEL_URL 
         ? `https://${process.env.VERCEL_URL}` 
+        : process.env.RAILWAY_PUBLIC_DOMAIN
+        ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
         : 'http://localhost:3000';
       
       const response = await fetch(`${base}/api/vehicles`);
