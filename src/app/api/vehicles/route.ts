@@ -10,155 +10,10 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('q');
     console.log('搜尋參數:', query);
 
-    // 暫時使用更多測試資料，確認前端顯示正常
-    const testVehicles: VehicleRecord[] = [
-      {
-        id: '1',
-        plate: 'ABC-1234',
-        vehicleType: '轎車',
-        applicantName: '張三',
-        contactPhone: '0912-345-678',
-        identityType: '同仁',
-        applicationDate: '2024-01-15',
-        visitTime: '09:00',
-        brand: 'Toyota',
-        color: '白色',
-        department: '資訊部',
-        approvalStatus: 'approved',
-        notes: '長期停車',
-        createdAt: '2024-01-15T09:00:00.000Z',
-        updatedAt: '2024-01-15T09:00:00.000Z',
-        submittedBy: 'admin'
-      },
-      {
-        id: '2',
-        plate: 'DEF-5678',
-        vehicleType: '機車',
-        applicantName: '李四',
-        contactPhone: '0923-456-789',
-        identityType: '一般訪客',
-        applicationDate: '2024-01-16',
-        visitTime: '14:30',
-        brand: 'Yamaha',
-        color: '黑色',
-        department: '',
-        approvalStatus: 'pending',
-        notes: '臨時訪客',
-        createdAt: '2024-01-16T14:30:00.000Z',
-        updatedAt: '2024-01-16T14:30:00.000Z',
-        submittedBy: 'self'
-      },
-      {
-        id: '3',
-        plate: 'GHI-9012',
-        vehicleType: '貴賓用車',
-        applicantName: '王五',
-        contactPhone: '0934-567-890',
-        identityType: '長官',
-        applicationDate: '2024-01-17',
-        visitTime: '10:00',
-        brand: 'Mercedes-Benz',
-        color: '黑色',
-        department: '總經理室',
-        approvalStatus: 'approved',
-        notes: '貴賓車輛',
-        createdAt: '2024-01-17T10:00:00.000Z',
-        updatedAt: '2024-01-17T10:00:00.000Z',
-        submittedBy: 'admin'
-      },
-      {
-        id: '4',
-        plate: 'JKL-3456',
-        vehicleType: '轎車',
-        applicantName: '陳六',
-        contactPhone: '0945-678-901',
-        identityType: '關係企業',
-        applicationDate: '2024-01-18',
-        visitTime: '15:45',
-        brand: 'Honda',
-        color: '銀色',
-        department: '合作夥伴',
-        approvalStatus: 'approved',
-        notes: '合作廠商代表',
-        createdAt: '2024-01-18T15:45:00.000Z',
-        updatedAt: '2024-01-18T15:45:00.000Z',
-        submittedBy: 'self'
-      },
-      {
-        id: '5',
-        plate: 'MNO-7890',
-        vehicleType: '轎車',
-        applicantName: '林七',
-        contactPhone: '0956-789-012',
-        identityType: '一般訪客',
-        applicationDate: '2024-01-19',
-        visitTime: '08:30',
-        brand: 'Nissan',
-        color: '藍色',
-        department: '',
-        approvalStatus: 'rejected',
-        notes: '資料不完整',
-        createdAt: '2024-01-19T08:30:00.000Z',
-        updatedAt: '2024-01-19T08:30:00.000Z',
-        submittedBy: 'self'
-      },
-      {
-        id: '6',
-        plate: 'PQR-2468',
-        vehicleType: '轎車',
-        applicantName: '吳八',
-        contactPhone: '0967-890-123',
-        identityType: '同仁',
-        applicationDate: '2024-08-01',
-        visitTime: '08:00',
-        brand: 'BMW',
-        color: '白色',
-        department: '業務部',
-        approvalStatus: 'approved',
-        notes: '員工車輛',
-        createdAt: '2024-08-01T08:00:00.000Z',
-        updatedAt: '2024-08-01T08:00:00.000Z',
-        submittedBy: 'admin'
-      },
-      {
-        id: '7',
-        plate: 'STU-1357',
-        vehicleType: '機車',
-        applicantName: '劉九',
-        contactPhone: '0978-901-234',
-        identityType: '關係企業',
-        applicationDate: '2024-08-02',
-        visitTime: '09:30',
-        brand: 'Suzuki',
-        color: '紅色',
-        department: '供應商',
-        approvalStatus: 'pending',
-        notes: '供應商訪問',
-        createdAt: '2024-08-02T09:30:00.000Z',
-        updatedAt: '2024-08-02T09:30:00.000Z',
-        submittedBy: 'self'
-      },
-      {
-        id: '8',
-        plate: 'VWX-9753',
-        vehicleType: '轎車',
-        applicantName: '黃十',
-        contactPhone: '0989-012-345',
-        identityType: '長官',
-        applicationDate: '2024-08-02',
-        visitTime: '11:00',
-        brand: 'Audi',
-        color: '灰色',
-        department: '董事會',
-        approvalStatus: 'approved',
-        notes: '董事會成員',
-        createdAt: '2024-08-02T11:00:00.000Z',
-        updatedAt: '2024-08-02T11:00:00.000Z',
-        submittedBy: 'admin'
-      }
-    ];
-
-    let vehicles = testVehicles;
+    // 直接從 Ragic 取得車輛資料
+    console.log('🔍 開始從 Ragic 取得資料...');
+    let vehicles = await RagicAPI.getRecords();
+    console.log('📊 從 Ragic 取得資料筆數:', vehicles.length);
 
     // 如果有搜尋查詢，進行過濾
     if (query) {
@@ -176,7 +31,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    console.log(`API: 返回 ${vehicles.length} 筆車輛記錄`);
+    console.log(`✅ API: 返回 ${vehicles.length} 筆車輛記錄`);
 
     return NextResponse.json({
       success: true,
@@ -184,10 +39,10 @@ export async function GET(request: NextRequest) {
       message: `找到 ${vehicles.length} 筆記錄`
     });
   } catch (error) {
-    console.error('API 錯誤:', error);
+    console.error('❌ API 錯誤:', error);
     return NextResponse.json({
       success: false,
-      error: '伺服器錯誤',
+      error: '取得車輛資料失敗',
       data: []
     }, { status: 500 });
   }
