@@ -17,49 +17,39 @@ export default function RagicTest() {
     setResult('測試中...');
 
     try {
-      const baseURL = 'https://ap7.ragic.com';
-      const accountName = 'xinsheng';
-      const formId = '31';
-      const subtableId = '6';
-      
-      const url = `${baseURL}/${accountName}/ragicforms${formId}/${subtableId}?api&APIKey=${encodeURIComponent(apiKey)}`;
-      
-      console.log('測試 URL:', url);
-      
-      const response = await fetch(url, {
-        method: 'GET',
+      // 使用測試 API
+      const response = await fetch('/api/test-ragic', {
+        method: 'POST',
         headers: {
-          'Accept': 'application/json',
-        }
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          apiKey: apiKey,
+          action: 'test-connection'
+        })
       });
 
-      console.log('回應狀態:', response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        setResult(`❌ HTTP 錯誤 ${response.status}: ${errorText}`);
-        return;
-      }
-
       const data = await response.json();
-      console.log('取得的資料:', data);
+      console.log('API 回應:', data);
 
-      let resultText = '✅ 連接成功!\n\n';
-      resultText += `資料類型: ${typeof data}\n`;
-      resultText += `是否為陣列: ${Array.isArray(data)}\n`;
-
-      if (typeof data === 'object' && !Array.isArray(data)) {
-        const keys = Object.keys(data);
-        resultText += `記錄數量: ${keys.length}\n\n`;
+      let resultText = '';
+      if (data.success) {
+        resultText = `✅ API 連接成功!\n\n`;
+        resultText += `${data.message}\n\n`;
         
-        if (keys.length > 0) {
-          const firstKey = keys[0];
-          const firstRecord = data[firstKey];
-          resultText += `第一筆記錄的欄位:\n`;
-          resultText += Object.keys(firstRecord).join(', ') + '\n\n';
-          resultText += `第一筆記錄範例:\n`;
-          resultText += JSON.stringify(firstRecord, null, 2);
+        if (data.data.sampleRecords && data.data.sampleRecords.length > 0) {
+          resultText += `記錄範例:\n`;
+          data.data.sampleRecords.forEach((record: any, index: number) => {
+            resultText += `\n第 ${index + 1} 筆記錄:\n`;
+            resultText += `- 車牌: ${record.plate || '無'}\n`;
+            resultText += `- 申請人: ${record.applicantName || '無'}\n`;
+            resultText += `- 車輛類型: ${record.vehicleType || '無'}\n`;
+            resultText += `- 聯絡電話: ${record.contactPhone || '無'}\n`;
+            resultText += `- 申請日期: ${record.applicationDate || '無'}\n`;
+          });
         }
+      } else {
+        resultText = `❌ API 錯誤: ${data.error}`;
       }
 
       setResult(resultText);

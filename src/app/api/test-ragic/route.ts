@@ -1,9 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { RagicAPI } from '@/lib/api';
 
-// POST /api/test-ragic - 測試 Ragic 寫入功能
+// POST /api/test-ragic - 測試 Ragic API 連接
 export async function POST(request: NextRequest) {
   try {
+    const { apiKey, action } = await request.json();
+    
+    if (action === 'test-connection' && apiKey) {
+      // 臨時設定 API Key 進行測試
+      const originalApiKey = process.env.NEXT_PUBLIC_RAGIC_API_KEY;
+      (process.env as any).NEXT_PUBLIC_RAGIC_API_KEY = apiKey;
+      
+      try {
+        // 測試 Ragic API 連接
+        const records = await RagicAPI.getRecords();
+        
+        // 恢復原本的 API Key
+        if (originalApiKey) {
+          (process.env as any).NEXT_PUBLIC_RAGIC_API_KEY = originalApiKey;
+        }
+        
+        return NextResponse.json({
+          success: true,
+          data: {
+            recordCount: records.length,
+            sampleRecords: records.slice(0, 2) // 返回前2筆作為範例
+          },
+          message: `成功連接 Ragic，找到 ${records.length} 筆記錄`
+        });
+      } catch (error) {
+        // 恢復原本的 API Key
+        if (originalApiKey) {
+          (process.env as any).NEXT_PUBLIC_RAGIC_API_KEY = originalApiKey;
+        }
+        throw error;
+      }
+    }
+    
+    // 原本的測試寫入功能
     console.log('🧪 開始測試 Ragic 寫入功能...');
     
     const testVehicle = {

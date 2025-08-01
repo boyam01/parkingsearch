@@ -81,7 +81,7 @@ export class VehicleAPI {
         return ragicData;
       } catch (ragicError) {
         console.error('VehicleAPI: 直接從 Ragic 取得資料也失敗:', ragicError);
-        // 最後才返回空陣列，而不是模擬資料
+        // 返回空陣列，不使用模擬資料
         return [];
       }
     }
@@ -189,102 +189,6 @@ export class VehicleAPI {
         recent: 0
       };
     }
-  }
-
-  // 模擬資料（用於開發測試）
-  static getMockData(): VehicleRecord[] {
-    return [
-      {
-        id: '1',
-        plate: 'ABC-1234',
-        vehicleType: 'car',
-        applicantName: '張三',
-        contactPhone: '0912-345-678',
-        identityType: 'staff',
-        applicationDate: '2024-01-15',
-        visitTime: '09:00',
-        brand: 'Toyota',
-        color: '白色',
-        department: '資訊部',
-        approvalStatus: 'approved',
-        notes: '長期停車',
-        createdAt: '2024-01-15T09:00:00.000Z',
-        updatedAt: '2024-01-15T09:00:00.000Z',
-        submittedBy: 'admin'
-      },
-      {
-        id: '2',
-        plate: 'DEF-5678',
-        vehicleType: 'motorcycle',
-        applicantName: '李四',
-        contactPhone: '0923-456-789',
-        identityType: 'visitor',
-        applicationDate: '2024-01-16',
-        visitTime: '14:30',
-        brand: 'Yamaha',
-        color: '黑色',
-        department: '',
-        approvalStatus: 'pending',
-        notes: '臨時訪客',
-        createdAt: '2024-01-16T14:30:00.000Z',
-        updatedAt: '2024-01-16T14:30:00.000Z',
-        submittedBy: 'self'
-      },
-      {
-        id: '3',
-        plate: 'GHI-9012',
-        vehicleType: 'vip',
-        applicantName: '王五',
-        contactPhone: '0934-567-890',
-        identityType: 'executive',
-        applicationDate: '2024-01-17',
-        visitTime: '10:00',
-        brand: 'Mercedes-Benz',
-        color: '黑色',
-        department: '總經理室',
-        approvalStatus: 'approved',
-        notes: '貴賓車輛',
-        createdAt: '2024-01-17T10:00:00.000Z',
-        updatedAt: '2024-01-17T10:00:00.000Z',
-        submittedBy: 'admin'
-      },
-      {
-        id: '4',
-        plate: 'JKL-3456',
-        vehicleType: 'car',
-        applicantName: '陳六',
-        contactPhone: '0945-678-901',
-        identityType: 'partner',
-        applicationDate: '2024-01-18',
-        visitTime: '15:45',
-        brand: 'Honda',
-        color: '銀色',
-        department: '合作夥伴',
-        approvalStatus: 'approved',
-        notes: '合作廠商代表',
-        createdAt: '2024-01-18T15:45:00.000Z',
-        updatedAt: '2024-01-18T15:45:00.000Z',
-        submittedBy: 'self'
-      },
-      {
-        id: '5',
-        plate: 'MNO-7890',
-        vehicleType: 'truck',
-        applicantName: '林七',
-        contactPhone: '0956-789-012',
-        identityType: 'visitor',
-        applicationDate: '2024-01-19',
-        visitTime: '08:30',
-        brand: 'Isuzu',
-        color: '白色',
-        department: '',
-        approvalStatus: 'rejected',
-        notes: '貨車禁止進入',
-        createdAt: '2024-01-19T08:30:00.000Z',
-        updatedAt: '2024-01-19T08:30:00.000Z',
-        submittedBy: 'self'
-      }
-    ];
   }
 }
 
