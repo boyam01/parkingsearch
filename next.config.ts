@@ -7,11 +7,12 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Netlify 部署優化
-  trailingSlash: false,
+  // 圖片優化設定
   images: {
-    unoptimized: true, // Netlify 圖片優化
+    unoptimized: true, // 適用於 Netlify/Railway 等平台
   },
+  // 確保路由正常工作
+  trailingSlash: false,
 };
 
 export default nextConfig;
