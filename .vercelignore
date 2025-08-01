@@ -1,0 +1,58 @@
+# Local development files
+.env.local
+.env.development
+.env.test
+
+# Test files
+src/app/test/
+src/app/test-*/
+src/app/write-test/
+src/app/search-test/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Development scripts
+start-dev.bat
+kill-port-3000.bat
+test-*.js
+test-*.html
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Cache and logs
+.next/
+node_modules/
+.vercel/
+*.log
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+out/
+dist/
+build/
+
+# Database files
+database/
+*.db
+*.sqlite
+
+# Large assets (if any)
+public/videos/
+public/docs/
+*.mp4
+*.avi
+*.pdf

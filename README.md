@@ -40,14 +40,69 @@
 - Node.js 18+ 
 - npm 或 yarn
 
-### 安裝與啟動
+### 本地開發
 
 ```bash
-# 安裝依賴
+# 1. 安裝依賴
 npm install
 
-# 啟動開發伺服器
+# 2. 複製環境變數檔案
+cp .env.example .env.local
+
+# 3. 編輯 .env.local 設定您的 Ragic API 資訊
+
+# 4. 建置專案 (確保沒有編譯錯誤)
+npm run build
+
+# 5. 啟動開發伺服器
 npm run dev
+```
+
+### Vercel 部署
+
+#### 方法一：自動部署 (推薦)
+1. Fork 此專案到您的 GitHub
+2. 在 [Vercel](https://vercel.com) 導入專案
+3. 環境變數會自動從 Vercel Dashboard 設定
+
+#### 方法二：CLI 部署
+```bash
+# 1. 安裝 Vercel CLI
+npm install -g vercel
+
+# 2. 登入 Vercel
+vercel login
+
+# 3. 一鍵設定環境變數並部署
+chmod +x vercel-env-setup.sh
+./vercel-env-setup.sh
+
+# 或手動部署
+vercel --prod
+```
+
+#### 環境變數設定
+在 Vercel Dashboard > Settings > Environment Variables 中設定：
+
+**必要變數：**
+```env
+NEXT_PUBLIC_API_BASE_URL=/api
+NEXT_PUBLIC_RAGIC_BASE_URL=https://ap7.ragic.com
+NEXT_PUBLIC_RAGIC_ACCOUNT=your-account
+NEXT_PUBLIC_RAGIC_API_KEY=your-api-key
+NEXT_PUBLIC_RAGIC_FORM_ID=31
+NEXT_PUBLIC_RAGIC_SUBTABLE_ID=6
+NEXT_PUBLIC_RAGIC_ADD_RECORD_ID=-20000
+NEXTAUTH_SECRET=your-secure-secret-key
+NEXTAUTH_URL=https://your-domain.vercel.app
+```
+
+**效能調校變數：**
+```env
+NEXT_PUBLIC_CACHE_TTL=60000
+NEXT_PUBLIC_MAX_CONCURRENT_REQUESTS=10
+NEXT_PUBLIC_REQUEST_TIMEOUT=10000
+```
 ```
 
 開啟瀏覽器訪問 [http://localhost:3000](http://localhost:3000) 即可看到車牌查詢系統。

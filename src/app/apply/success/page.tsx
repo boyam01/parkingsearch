@@ -1,12 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle, ArrowLeft, FileText, Clock, Mail } from 'lucide-react';
 import { Navigation, PageHeader } from '@/components/Navigation';
 
-export default function ApplicationSuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const applicationId = searchParams.get('id');
@@ -26,7 +26,6 @@ export default function ApplicationSuccessPage() {
         />
         
         <div className="max-w-2xl mx-auto">
-          {/* 成功訊息 */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle className="w-8 h-8 text-green-600" />
@@ -98,7 +97,6 @@ export default function ApplicationSuccessPage() {
             </div>
           </div>
           
-          {/* 操作按鈕 */}
           <div className="flex flex-col sm:flex-row gap-3 mt-8">
             <Link
               href="/"
@@ -118,5 +116,20 @@ export default function ApplicationSuccessPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ApplicationSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="mt-2 text-gray-600">載入中...</div>
+        </div>
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   );
 }
