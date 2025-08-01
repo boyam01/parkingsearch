@@ -305,7 +305,9 @@ export class RagicAPI {
   static async getRecords(): Promise<VehicleRecord[]> {
     // 強制使用 Ragic 資料庫，不使用模擬資料
     try {
-      const apiKey = this.apiKey || '';
+      const rawApiKey = this.apiKey || '';
+      // 🔧 清理 API Key，移除可能的換行符和空白字符
+      const apiKey = rawApiKey.trim().replace(/[\r\n\t]/g, '');
       const url = `${this.baseURL}/${this.accountName}/ragicforms${this.formId}/${this.subtableId}?api&APIKey=${encodeURIComponent(apiKey)}`;
       console.log('Ragic API URL:', url);
       
@@ -337,7 +339,8 @@ export class RagicAPI {
 
   static async getRecordById(id: string): Promise<VehicleRecord | null> {
     try {
-      const apiKey = this.apiKey || '';
+      const rawApiKey = this.apiKey || '';
+      const apiKey = rawApiKey.trim().replace(/[\r\n\t]/g, '');
       const url = `${this.baseURL}/${this.accountName}/ragicforms${this.formId}/${this.subtableId}/${id}?api&APIKey=${encodeURIComponent(apiKey)}`;
       
       const response = await fetch(url, {
@@ -371,7 +374,8 @@ export class RagicAPI {
       const ragicData = this.transformToRagicFormat(vehicle);
       console.log('轉換後的 Ragic 格式:', ragicData);
       
-      const apiKey = this.apiKey || '';
+      const rawApiKey = this.apiKey || '';
+      const apiKey = rawApiKey.trim().replace(/[\r\n\t]/g, '');
       if (!apiKey) {
         throw new Error('RAGIC_API_KEY 未設定');
       }
@@ -448,7 +452,8 @@ export class RagicAPI {
   static async updateRecord(id: string, vehicle: Partial<VehicleRecord>): Promise<VehicleRecord> {
     try {
       const ragicData = this.transformToRagicFormat(vehicle);
-      const apiKey = this.apiKey || '';
+      const rawApiKey = this.apiKey || '';
+      const apiKey = rawApiKey.trim().replace(/[\r\n\t]/g, '');
       const url = `${this.baseURL}/${this.accountName}/ragicforms${this.formId}/${this.subtableId}/${id}?api&APIKey=${encodeURIComponent(apiKey)}`;
       
       console.log('更新 Ragic 記錄 URL:', url);
@@ -480,7 +485,8 @@ export class RagicAPI {
 
   static async deleteRecord(id: string): Promise<void> {
     try {
-      const apiKey = this.apiKey || '';
+      const rawApiKey = this.apiKey || '';
+      const apiKey = rawApiKey.trim().replace(/[\r\n\t]/g, '');
       const url = `${this.baseURL}/${this.accountName}/ragicforms${this.formId}/${this.subtableId}/${id}?api&APIKey=${encodeURIComponent(apiKey)}`;
       
       const response = await fetch(url, {
