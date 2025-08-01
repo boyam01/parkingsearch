@@ -450,25 +450,46 @@ export class RagicAPI {
       const applicant = item["申請人姓名"];  
       const type = item["車輛類型"];
       
-      console.log(`🏷️ 車牌欄位 (車牌號碼):`, carPlate, typeof carPlate);
-      console.log(`👤 申請人欄位 (申請人姓名):`, applicant, typeof applicant);
-      console.log(`🚗 車輛類型欄位 (車輛類型):`, type, typeof type);
+      console.log(`🏷️ 車牌欄位分析:`, {
+        fromChinese: item["車牌號碼"],
+        fromID: item["1003984"],
+        final: carPlate,
+        type: typeof carPlate,
+        isEmpty: !carPlate || carPlate.trim() === ''
+      });
+      console.log(`👤 申請人欄位分析:`, {
+        fromChinese: item["申請人姓名"],
+        fromID: item["1003985"],
+        final: applicant,
+        type: typeof applicant,
+        isEmpty: !applicant || applicant.trim() === ''
+      });
+      console.log(`🚗 車輛類型欄位分析:`, {
+        fromChinese: item["車輛類型"],
+        fromID: item["1003986"],
+        final: type,
+        mapped: this.mapVehicleType(type || 'car')
+      });
       
       const record: VehicleRecord = {
         id: item._ragicId?.toString() || `temp_${index}`,
-        // � 使用中文欄位名稱 - Ragic 實際回傳的格式
-        plate: String(carPlate || `未知車牌-${index}`).trim(),  // 車牌號碼
-        applicantName: String(applicant || '').trim(),  // 申請人姓名
-        vehicleType: this.mapVehicleType(type || ''),  // 車輛類型
-        contactPhone: String(item['聯絡電話'] || '').trim(),  // 聯絡電話
-        identityType: this.mapIdentityType(item['身份類別'] || ''),  // 身分類別
-        applicationDate: this.formatDate(item['申請日期'] || ''),  // 申請日期
-        visitTime: String(item['到訪時間'] || '').trim(),  // 到訪時間
-        brand: String(item['車輛品牌'] || '').trim(),  // 車輛品牌
-        color: String(item['車輛顏色'] || '').trim(),  // 車輛顏色
-        department: String(item['部門'] || '').trim(),  // 部門
+        // 🔥 強化車牌顯示邏輯 - 確保車牌不為空或無效
+        plate: carPlate && carPlate.trim() && carPlate.trim() !== '' ? 
+               String(carPlate).trim() : 
+               `MISSING-${item._ragicId || index}`,
+        applicantName: applicant && applicant.trim() && applicant.trim() !== '' ? 
+                      String(applicant).trim() : 
+                      '未知申請人',
+        vehicleType: this.mapVehicleType(type || 'car'),  // 預設為轎車
+        contactPhone: String(item['聯絡電話'] || item['1003992'] || '').trim(),
+        identityType: this.mapIdentityType(item['身份類別'] || item['1003989'] || 'visitor'),
+        applicationDate: this.formatDate(item['申請日期'] || item['1003994'] || ''),
+        visitTime: String(item['到訪時間'] || item['1003987'] || '').trim(),
+        brand: String(item['車輛品牌'] || item['1003991'] || '').trim(),
+        color: String(item['車輛顏色'] || item['1003988'] || '').trim(),
+        department: String(item['部門'] || item['1003995'] || '').trim(),
         approvalStatus: 'pending',  
-        notes: String(item['備註'] || '').trim(),  // 備註  
+        notes: String(item['備註'] || item['1003996'] || '').trim(),  
         // 申請系統相關欄位
         applicantEmail: '',
         applicantId: '',

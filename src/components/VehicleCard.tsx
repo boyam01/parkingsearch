@@ -66,8 +66,14 @@ export function VehicleCard({
           {/* 車牌號碼 */}
           <div className="min-w-0 flex-1">
             <h3 className="text-base md:text-lg font-bold text-gray-900 truncate">
-              {/* 🚨 強化車牌顯示邏輯 */}
-              {vehicle.plate ? highlightText(vehicle.plate) : (
+              {/* 🚨 強化車牌顯示邏輯 - 支援多種錯誤狀態 */}
+              {vehicle.plate && vehicle.plate.trim() && vehicle.plate !== `MISSING-${vehicle.id}` ? (
+                highlightText(vehicle.plate)
+              ) : vehicle.plate?.startsWith('MISSING-') ? (
+                <span className="text-orange-600 bg-orange-100 px-2 py-1 rounded text-sm">
+                  [系統檢測到車牌遺失 ID:{vehicle.id}]
+                </span>
+              ) : (
                 <span className="text-red-500 bg-red-100 px-2 py-1 rounded text-sm">
                   [車牌未設定 ID:{vehicle.id}]
                 </span>
