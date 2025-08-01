@@ -446,28 +446,29 @@ export class RagicAPI {
     return dataArray.map((item: any, index: number) => {
       const record: VehicleRecord = {
         id: item._ragicId?.toString() || index.toString(),
-        plate: item['車牌號碼'] || '',
-        vehicleType: this.mapVehicleType(item['車輛類型'] || ''),
-        applicantName: item['申請人姓名'] || '',
-        contactPhone: item['聯絡電話'] || '',
-        identityType: this.mapIdentityType(item['身份類別'] || ''),
-        applicationDate: this.formatDate(item['申請日期'] || ''),
-        visitTime: item['到訪時間'] || '',
-        brand: item['車輛品牌'] || '',
-        color: item['車輛顏色'] || '',
-        department: item['部門'] || '',
-        approvalStatus: this.mapApprovalStatus(item['審核狀態'] || ''),
-        notes: item['備註'] || '',
-        // 申請系統相關欄位
-        applicantEmail: item['申請人信箱'] || '',
-        applicantId: item['申請人身分證'] || '',
-        emergencyContact: item['緊急聯絡人'] || '',
-        emergencyPhone: item['緊急聯絡電話'] || '',
-        visitPurpose: item['來訪目的'] || '',
-        expectedDuration: item['預計停留時間'] || '',
+        // 使用正確的 Ragic 欄位編號
+        plate: item['1003984'] || '',  // 車牌號碼
+        vehicleType: this.mapVehicleType(item['1003988'] || ''),  // 車輛類型
+        applicantName: item['1003990'] || '',  // 申請人姓名
+        contactPhone: item['1003992'] || '',  // 聯絡電話
+        identityType: this.mapIdentityType(item['1003989'] || ''),  // 身分類別
+        applicationDate: this.formatDate(item['1003994'] || ''),  // 申請日期
+        visitTime: item['1003986'] || '',  // 到訪時間
+        brand: item['1003991'] || '',  // 車輛品牌
+        color: item['1003993'] || '',  // 車輛顏色
+        department: item['1003995'] || '',  // 部門
+        approvalStatus: 'pending',  // 預設狀態
+        notes: '',  // 備註欄位編號未知，暫時留空
+        // 申請系統相關欄位 (這些可能需要其他 Ragic 欄位編號)
+        applicantEmail: '',
+        applicantId: '',
+        emergencyContact: '',
+        emergencyPhone: '',
+        visitPurpose: '',
+        expectedDuration: '',
         submittedBy: 'self',
-        ipAddress: item['IP位址'] || '',
-        userAgent: item['瀏覽器資訊'] || '',
+        ipAddress: '',
+        userAgent: '',
         createdAt: item._ragic_createdate || new Date(item._dataTimestamp || Date.now()).toISOString(),
         updatedAt: item._ragic_modifydate || new Date(item._dataTimestamp || Date.now()).toISOString()
       };
