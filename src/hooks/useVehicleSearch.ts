@@ -32,7 +32,7 @@ export interface UseVehicleSearchReturn {
   // 搜尋控制
   search: (query: string) => Promise<void>;
   clearResults: () => void;
-  refreshData: (forceClearCache?: boolean) => Promise<void>;
+  refreshData: () => Promise<void>;
 
   // 統計資訊
   totalRecords: number;
@@ -248,56 +248,17 @@ export function useVehicleSearch(options: UseVehicleSearchOptions = {}): UseVehi
     setIsError(false);
   }, []);
 
-  // 重新整理資料（快速模式）
-  const refreshData = useCallback(async (forceClearCache = false) => {
-    console.log('🔄 開始快速重新整理...');
-    const startTime = performance.now();
-    
-    setIsLoading(true);
-    
-    try {
-      if (forceClearCache && enableCache) {
-        console.log('🗑️ 清除快取');
-        cache.clear();
-        if (enableOfflineSearch) {
-          await indexedCache.clear();
-        }
-        setIsDataLoaded(false);
+  // 重新整理資料
+  const refreshData = useCallback(async () => {
+    setIsDataLoaded(false);
+    if (enableCache) {
+      cache.clear();
+      if (enableOfflineSearch) {
+        await indexedCache.clear();
       }
-      
-      // 直接從 Ragic API 獲取最新資料
-      console.log('📡 重新獲取資料...');
-      const vehicles = await VehicleAPI.getAllVehicles();
-      
-      // 立即更新狀態
-      setAllVehicles(vehicles);
-      setIsDataLoaded(true);
-      
-      // 重建搜尋索引
-      trie.clear();
-      vehicles.forEach((vehicle: VehicleRecord) => trie.insert(vehicle));
-      
-      // 更新快取
-      if (enableCache) {
-        cache.set('vehicles', vehicles);
-        
-        if (enableOfflineSearch) {
-          // 異步更新 IndexedDB，不阻塞 UI
-          indexedCache.saveVehicles(vehicles).catch(console.error);
-        }
-      }
-      
-      const endTime = performance.now();
-      console.log(`✅ 重新整理完成，耗時: ${(endTime - startTime).toFixed(0)}ms`);
-      
-    } catch (error) {
-      console.error('❌ 重新整理失敗:', error);
-      setIsError(true);
-      setError(error instanceof Error ? error.message : '重新整理失敗');
-    } finally {
-      setIsLoading(false);
     }
-  }, [enableCache, enableOfflineSearch, cache, indexedCache, trie]);
+    await loadVehicleData();
+  }, [enableCache, enableOfflineSearch, cache, indexedCache, loadVehicleData]);
 
   // 當查詢字串改變時執行搜尋
   useEffect(() => {
