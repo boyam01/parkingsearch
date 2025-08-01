@@ -305,137 +305,268 @@ export class RagicAPI {
   }
 
   static async createRecord(vehicle: Partial<VehicleRecord>): Promise<VehicleRecord> {
-    console.log('🔥 強制寫入 Ragic 記錄開始');
+    console.log('🔥 開始寫入 Ragic 記錄');
     console.log('原始車輛資料:', vehicle);
     
     try {
-      const ragicData = this.transformToRagicFormat(vehicle);
-      console.log('轉換後的 Ragic 格式:', ragicData);
+      // 驗證環境變數
+      const apiKey = this.apiKey?.trim();
+      const accountName = this.accountName?.trim();
+      const formId = this.formId?.trim();
+      const subtableId = this.subtableId?.trim();
       
-      const apiKey = this.apiKey || '';
       if (!apiKey) {
-        throw new Error('RAGIC_API_KEY 未設定');
+        throw new Error('NEXT_PUBLIC_RAGIC_API_KEY 未設定或為空');
+      }
+      if (!accountName) {
+        throw new Error('NEXT_PUBLIC_RAGIC_ACCOUNT 未設定或為空');
+      }
+      if (!formId) {
+        throw new Error('NEXT_PUBLIC_RAGIC_FORM_ID 未設定或為空');
+      }
+      if (!subtableId) {
+        throw new Error('NEXT_PUBLIC_RAGIC_SUBTABLE_ID 未設定或為空');
       }
       
-      // 強制使用正確的 Ragic API 端點
-      const url = `${this.baseURL}/${this.accountName}/ragicforms${this.formId}/${this.subtableId}?api&APIKey=${encodeURIComponent(apiKey)}`;
-      console.log('🚀 強制寫入 URL:', url);
+      console.log('📋 環境變數檢查通過:', {
+        baseURL: this.baseURL,
+        accountName,
+        formId,
+        subtableId,
+        hasApiKey: !!apiKey
+      });
       
-      // 多重嘗試寫入機制
+      // 轉換資料格式
+      const ragicData = this.transformToRagicFormat(vehicle);
+      console.log('🔄 轉換後的 Ragic 格式:', ragicData);
+      
+      // 驗證必要欄位
+      const requiredFields = ['1003984', '1003990', '1003992']; // 車牌、申請人、電話
+      for (const field of requiredFields) {
+        if (!ragicData[field]) {
+          throw new Error(`缺少必要欄位: ${field}`);
+        }
+      }
+      
+      // 構建 API URL
+      const url = `${this.baseURL}/${accountName}/ragicforms${formId}/${subtableId}?api&APIKey=${encodeURIComponent(apiKey)}`;
+      console.log('🚀 寫入 URL:', url);
+      
+      // 準備請求參數
+      const formData = new URLSearchParams();
+      Object.entries(ragicData).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          formData.append(key, String(value));
+        }
+      });
+      
+      console.log('📤 發送資料:', formData.toString());
+      
+      // 執行寫入操作（包含重試機制）
       let response: Response;
-      let attempts = 0;
+      let lastError: any = null;
       const maxAttempts = 3;
       
-      while (attempts < maxAttempts) {
-        attempts++;
-        console.log(`📝 嘗試寫入第 ${attempts} 次...`);
-        
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
+          console.log(`� 第 ${attempt} 次寫入嘗試...`);
+          
           response = await fetch(url, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
               'Accept': 'application/json',
+              'User-Agent': 'ParkingSearch/1.0',
               'Cache-Control': 'no-cache',
               'Pragma': 'no-cache'
             },
-            body: new URLSearchParams(ragicData).toString()
+            body: formData.toString()
           });
           
-          console.log(`📊 第 ${attempts} 次回應狀態:`, response.status);
+          console.log(`📊 第 ${attempt} 次回應狀態:`, response.status);
           
           if (response.ok) {
             break; // 成功就跳出迴圈
-          } else if (attempts < maxAttempts) {
-            console.warn(`⚠️ 第 ${attempts} 次寫入失敗，準備重試...`);
-            await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // 遞增延遲
-            continue;
+          } else {
+            const errorText = await response.text();
+            console.error(`❌ 第 ${attempt} 次寫入失敗:`, response.status, errorText);
+            lastError = new Error(`HTTP ${response.status}: ${errorText}`);
+            
+            if (attempt < maxAttempts) {
+              console.log(`⏳ 等待 ${attempt * 2} 秒後重試...`);
+              await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+            }
           }
         } catch (fetchError) {
-          console.error(`❌ 第 ${attempts} 次網路錯誤:`, fetchError);
-          if (attempts >= maxAttempts) {
-            throw fetchError;
+          console.error(`💥 第 ${attempt} 次網路錯誤:`, fetchError);
+          lastError = fetchError;
+          
+          if (attempt < maxAttempts) {
+            console.log(`⏳ 等待 ${attempt * 2} 秒後重試...`);
+            await new Promise(resolve => setTimeout(resolve, attempt * 2000));
           }
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
         }
       }
-
-      if (!response!.ok) {
-        const errorText = await response!.text();
-        console.error('💥 最終寫入失敗回應:', errorText);
-        throw new Error(`強制寫入失敗! HTTP ${response!.status}: ${errorText}`);
-      }
-
-      const data = await response!.json();
-      console.log('✅ 強制寫入成功回應:', data);
       
-      // 強制轉換並驗證資料
-      const transformedData = this.transformRagicData([data]);
+      // 檢查最終結果
+      if (!response! || !response!.ok) {
+        throw lastError || new Error('所有寫入嘗試都失敗');
+      }
+      
+      // 解析回應
+      let responseData;
+      try {
+        const responseText = await response!.text();
+        console.log('� 原始回應內容:', responseText);
+        responseData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ 解析回應失敗:', parseError);
+        throw new Error('無法解析 Ragic 回應資料');
+      }
+      
+      console.log('✅ 寫入成功回應:', responseData);
+      
+      // 轉換回我們的格式
+      const transformedData = this.transformRagicData([responseData]);
       if (transformedData.length === 0) {
         throw new Error('資料轉換失敗，無法取得寫入結果');
       }
       
       const result = transformedData[0];
-      console.log('🎉 強制寫入完成，最終結果:', result);
+      console.log('🎉 寫入完成，最終結果:', result);
       
       return result;
     } catch (error) {
-      console.error('💀 強制寫入 Ragic 記錄徹底失敗:', error);
-      // 重新拋出錯誤，不允許靜默失敗
-      throw new Error(`強制寫入失敗: ${error instanceof Error ? error.message : String(error)}`);
+      console.error('💀 寫入 Ragic 記錄失敗:', error);
+      
+      // 提供更詳細的錯誤資訊
+      if (error instanceof Error) {
+        if (error.message.includes('API_KEY')) {
+          throw new Error('Ragic API Key 驗證失敗，請檢查環境變數設定');
+        } else if (error.message.includes('HTTP 4')) {
+          throw new Error('Ragic API 請求錯誤，請檢查欄位格式和權限');
+        } else if (error.message.includes('fetch')) {
+          throw new Error('網路連接錯誤，無法連接到 Ragic 伺服器');
+        }
+      }
+      
+      throw error;
     }
   }
 
   static async updateRecord(id: string, vehicle: Partial<VehicleRecord>): Promise<VehicleRecord> {
+    console.log('🔄 開始更新 Ragic 記錄');
+    console.log('記錄 ID:', id);
+    console.log('更新資料:', vehicle);
+    
     try {
+      // 驗證環境變數
+      const apiKey = this.apiKey?.trim();
+      const accountName = this.accountName?.trim();
+      const formId = this.formId?.trim();
+      const subtableId = this.subtableId?.trim();
+      
+      if (!apiKey || !accountName || !formId || !subtableId) {
+        throw new Error('Ragic 環境變數未正確設定');
+      }
+      
+      // 轉換資料格式
       const ragicData = this.transformToRagicFormat(vehicle);
-      const apiKey = this.apiKey || '';
-      const url = `${this.baseURL}/${this.accountName}/ragicforms${this.formId}/${this.subtableId}/${id}?api&APIKey=${encodeURIComponent(apiKey)}`;
+      console.log('🔄 轉換後的更新資料:', ragicData);
       
-      console.log('更新 Ragic 記錄 URL:', url);
-      console.log('更新資料:', ragicData);
+      // 構建 API URL
+      const url = `${this.baseURL}/${accountName}/ragicforms${formId}/${subtableId}/${id}?api&APIKey=${encodeURIComponent(apiKey)}`;
+      console.log('🚀 更新 URL:', url);
       
+      // 準備請求參數
+      const formData = new URLSearchParams();
+      Object.entries(ragicData).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          formData.append(key, String(value));
+        }
+      });
+      
+      // 執行更新操作
       const response = await fetch(url, {
-        method: 'POST',
+        method: 'POST', // Ragic 使用 POST 來更新記錄
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
           'Accept': 'application/json',
+          'User-Agent': 'ParkingSearch/1.0',
+          'Cache-Control': 'no-cache'
         },
-        body: JSON.stringify(ragicData)
+        body: formData.toString()
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('更新失敗回應:', errorText);
+        console.error('❌ 更新失敗回應:', errorText);
         throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
       }
 
-      const data = await response.json();
-      console.log('更新成功回應:', data);
-      return this.transformRagicData([data])[0];
+      let responseData;
+      try {
+        const responseText = await response.text();
+        console.log('📨 更新回應內容:', responseText);
+        responseData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ 解析更新回應失敗:', parseError);
+        throw new Error('無法解析 Ragic 更新回應');
+      }
+
+      console.log('✅ 更新成功回應:', responseData);
+      
+      // 轉換回我們的格式
+      const transformedData = this.transformRagicData([responseData]);
+      if (transformedData.length === 0) {
+        throw new Error('更新後資料轉換失敗');
+      }
+      
+      return transformedData[0];
     } catch (error) {
-      console.error('更新 Ragic 記錄錯誤:', error);
+      console.error('💥 更新 Ragic 記錄錯誤:', error);
       throw error;
     }
   }
 
   static async deleteRecord(id: string): Promise<void> {
+    console.log('🗑️ 開始刪除 Ragic 記錄');
+    console.log('記錄 ID:', id);
+    
     try {
-      const apiKey = this.apiKey || '';
-      const url = `${this.baseURL}/${this.accountName}/ragicforms${this.formId}/${this.subtableId}/${id}?api&APIKey=${encodeURIComponent(apiKey)}`;
+      // 驗證環境變數
+      const apiKey = this.apiKey?.trim();
+      const accountName = this.accountName?.trim();
+      const formId = this.formId?.trim();
+      const subtableId = this.subtableId?.trim();
       
+      if (!apiKey || !accountName || !formId || !subtableId) {
+        throw new Error('Ragic 環境變數未正確設定');
+      }
+      
+      // 構建 API URL
+      const url = `${this.baseURL}/${accountName}/ragicforms${formId}/${subtableId}/${id}?api&APIKey=${encodeURIComponent(apiKey)}`;
+      console.log('🚀 刪除 URL:', url);
+      
+      // 執行刪除操作
       const response = await fetch(url, {
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
+          'User-Agent': 'ParkingSearch/1.0',
+          'Cache-Control': 'no-cache'
         }
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ 刪除失敗回應:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
       }
+      
+      console.log('✅ 記錄刪除成功');
     } catch (error) {
-      console.error('刪除 Ragic 記錄錯誤:', error);
+      console.error('💥 刪除 Ragic 記錄錯誤:', error);
       throw error;
     }
   }
@@ -467,7 +598,7 @@ export class RagicAPI {
       
       // 檢查特定欄位的值 - 🔥 使用中文欄位名稱（Ragic 實際回傳的）
       const carPlate = item["車牌號碼"];
-      const applicant = item["申請人姓名"];  
+      const applicant = item["申請人姓名"] || item["1003990"];  // 同時檢查中文和ID
       const type = item["車輛類型"];
       
       console.log(`🏷️ 車牌欄位分析:`, {
@@ -479,14 +610,14 @@ export class RagicAPI {
       });
       console.log(`👤 申請人欄位分析:`, {
         fromChinese: item["申請人姓名"],
-        fromID: item["1003985"],
+        fromID: item["1003990"],
         final: applicant,
         type: typeof applicant,
         isEmpty: !applicant || applicant.trim() === ''
       });
       console.log(`🚗 車輛類型欄位分析:`, {
         fromChinese: item["車輛類型"],
-        fromID: item["1003986"],
+        fromID: item["1003988"],
         final: type,
         mapped: this.mapVehicleType(type || 'car')
       });
@@ -504,9 +635,9 @@ export class RagicAPI {
         contactPhone: String(item['聯絡電話'] || item['1003992'] || '').trim(),
         identityType: this.mapIdentityType(item['身份類別'] || item['1003989'] || 'visitor'),
         applicationDate: this.formatDate(item['申請日期'] || item['1003994'] || ''),
-        visitTime: String(item['到訪時間'] || item['1003987'] || '').trim(),
+        visitTime: String(item['到訪時間'] || item['1003986'] || '').trim(),
         brand: String(item['車輛品牌'] || item['1003991'] || '').trim(),
-        color: String(item['車輛顏色'] || item['1003988'] || '').trim(),
+        color: String(item['車輛顏色'] || '').trim(),
         department: String(item['部門'] || item['1003995'] || '').trim(),
         approvalStatus: 'pending',  
         notes: String(item['備註'] || item['1003996'] || '').trim(),  
@@ -586,20 +717,20 @@ export class RagicAPI {
   }
 
   private static transformToRagicFormat(vehicle: Partial<VehicleRecord>): any {
-    // 使用新的正確 Ragic 欄位編號
+    // 使用您提供的正確 Ragic 欄位編號
     const ragicData: any = {};
     
+    console.log('🔄 開始轉換資料到 Ragic 格式:', vehicle);
+    
     // 車牌號碼 (1003984) - 必填
-    if (vehicle.plate) {
-      ragicData['1003984'] = vehicle.plate;
+    if (vehicle.plate && vehicle.plate.trim()) {
+      ragicData['1003984'] = vehicle.plate.trim();
+      console.log('✅ 車牌號碼:', ragicData['1003984']);
+    } else {
+      console.warn('⚠️ 缺少車牌號碼');
     }
     
-    // 申請人姓名 (1003985) - 必填
-    if (vehicle.applicantName) {
-      ragicData['1003985'] = vehicle.applicantName;
-    }
-    
-    // 車輛類型 (1003986) - 必填，根據表單的下拉選項
+    // 車輛類型 (1003988) - 修正欄位編號
     if (vehicle.vehicleType) {
       const typeMap: { [key: string]: string } = {
         'car': '轎車',
@@ -609,20 +740,57 @@ export class RagicAPI {
         'vip': '貴賓用車',
         'other': '其他'
       };
-      ragicData['1003986'] = typeMap[vehicle.vehicleType] || '轎車';
+      ragicData['1003988'] = typeMap[vehicle.vehicleType] || '轎車';
+      console.log('✅ 車輛類型:', ragicData['1003988']);
+    } else {
+      ragicData['1003988'] = '轎車'; // 預設值
     }
     
-    // 到訪時間 (1003987)
-    if (vehicle.visitTime) {
-      ragicData['1003987'] = vehicle.visitTime;
+    // 申請人姓名 (1003990) - 修正欄位編號
+    if (vehicle.applicantName && vehicle.applicantName.trim()) {
+      ragicData['1003990'] = vehicle.applicantName.trim();
+      console.log('✅ 申請人姓名:', ragicData['1003990']);
+    } else {
+      console.warn('⚠️ 缺少申請人姓名');
     }
     
-    // 車輛顏色 (1003988)
-    if (vehicle.color) {
-      ragicData['1003988'] = vehicle.color;
+    // 聯絡電話 (1003992) - 必填
+    if (vehicle.contactPhone && vehicle.contactPhone.trim()) {
+      ragicData['1003992'] = vehicle.contactPhone.trim();
+      console.log('✅ 聯絡電話:', ragicData['1003992']);
+    } else {
+      console.warn('⚠️ 缺少聯絡電話');
     }
     
-    // 身分類別 (1003989) - 根據表單的下拉選項
+    // 申請日期 (1003994) - 必填，轉換為 yyyy/MM/dd 格式
+    if (vehicle.applicationDate) {
+      try {
+        const date = new Date(vehicle.applicationDate);
+        if (!isNaN(date.getTime())) {
+          ragicData['1003994'] = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
+          console.log('✅ 申請日期:', ragicData['1003994']);
+        } else {
+          throw new Error('無效的日期格式');
+        }
+      } catch (error) {
+        console.warn('⚠️ 申請日期格式錯誤，使用今天:', error);
+        const today = new Date();
+        ragicData['1003994'] = `${today.getFullYear()}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}`;
+      }
+    } else {
+      // 如果沒有提供申請日期，使用今天的日期
+      const today = new Date();
+      ragicData['1003994'] = `${today.getFullYear()}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}`;
+      console.log('✅ 申請日期 (預設今天):', ragicData['1003994']);
+    }
+    
+    // 到訪時間 (1003986) - 修正欄位編號
+    if (vehicle.visitTime && vehicle.visitTime.trim()) {
+      ragicData['1003986'] = vehicle.visitTime.trim();
+      console.log('✅ 到訪時間:', ragicData['1003986']);
+    }
+    
+    // 身分類別 (1003989) - 轉換為中文
     if (vehicle.identityType) {
       const identityMap: { [key: string]: string } = {
         'staff': '同仁',
@@ -633,41 +801,50 @@ export class RagicAPI {
         'guest': '一般訪客'
       };
       ragicData['1003989'] = identityMap[vehicle.identityType] || '訪客';
+      console.log('✅ 身分類別:', ragicData['1003989']);
+    } else {
+      ragicData['1003989'] = '訪客'; // 預設值
     }
     
     // 車輛品牌 (1003991)
-    if (vehicle.brand) {
-      ragicData['1003991'] = vehicle.brand;
-    }
-    
-    // 聯絡電話 (1003992) - 必填
-    if (vehicle.contactPhone) {
-      ragicData['1003992'] = vehicle.contactPhone;
-    }
-    
-    // 申請日期 (1003994) - 必填，轉換為 yyyy/MM/dd 格式
-    if (vehicle.applicationDate) {
-      const date = new Date(vehicle.applicationDate);
-      if (!isNaN(date.getTime())) {
-        ragicData['1003994'] = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
-      }
-    } else {
-      // 如果沒有提供申請日期，使用今天的日期
-      const today = new Date();
-      ragicData['1003994'] = `${today.getFullYear()}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}`;
+    if (vehicle.brand && vehicle.brand.trim()) {
+      ragicData['1003991'] = vehicle.brand.trim();
+      console.log('✅ 車輛品牌:', ragicData['1003991']);
     }
     
     // 部門 (1003995)
-    if (vehicle.department) {
-      ragicData['1003995'] = vehicle.department;
+    if (vehicle.department && vehicle.department.trim()) {
+      ragicData['1003995'] = vehicle.department.trim();
+      console.log('✅ 部門:', ragicData['1003995']);
     }
     
-    // 備註 (1003996)
-    if (vehicle.notes) {
-      ragicData['1003996'] = vehicle.notes;
+    // 備註 (如果有的話，您沒提供備註欄位編號，我保留原來的 1003996)
+    if (vehicle.notes && vehicle.notes.trim()) {
+      ragicData['1003996'] = vehicle.notes.trim();
+      console.log('✅ 備註:', ragicData['1003996']);
     }
     
-    console.log('🔄 轉換為 Ragic 格式 (使用新欄位編號):', ragicData);
+    console.log('🔄 最終轉換結果:', ragicData);
+    
+    // 驗證必要欄位 - 使用正確的欄位編號
+    const requiredFields = {
+      '1003984': '車牌號碼',
+      '1003990': '申請人姓名',
+      '1003992': '聯絡電話',
+      '1003994': '申請日期'
+    };
+    
+    const missingFields = [];
+    for (const [fieldId, fieldName] of Object.entries(requiredFields)) {
+      if (!ragicData[fieldId]) {
+        missingFields.push(fieldName);
+      }
+    }
+    
+    if (missingFields.length > 0) {
+      throw new Error(`缺少必要欄位: ${missingFields.join(', ')}`);
+    }
+    
     return ragicData;
   }
 }

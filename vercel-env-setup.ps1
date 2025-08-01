@@ -19,9 +19,9 @@ echo "xinsheng" | vercel env add NEXT_PUBLIC_RAGIC_ACCOUNT production
 echo "xinsheng" | vercel env add NEXT_PUBLIC_RAGIC_ACCOUNT preview
 echo "xinsheng" | vercel env add NEXT_PUBLIC_RAGIC_ACCOUNT development
 
-echo "c0VySnlCOEJ6dHlndkRHY0pUOTFEMnh6Zmo3VE9lYWdwbjB5d2tIcTRDZE1GMHB2NUFBUUZVZFByWVhxK1JGR3FSN2tDd2ttVlgwPQ==" | vercel env add NEXT_PUBLIC_RAGIC_API_KEY production
-echo "c0VySnlCOEJ6dHlndkRHY0pUOTFEMnh6Zmo3VE9lYWdwbjB5d2tIcTRDZE1GMHB2NUFBUUZVZFByWVhxK1JGR3FSN2tDd2ttVlgwPQ==" | vercel env add NEXT_PUBLIC_RAGIC_API_KEY preview
-echo "c0VySnlCOEJ6dHlndkRHY0pUOTFEMnh6Zmo3VE9lYWdwbjB5d2tIcTRDZE1GMHB2NUFBUUZVZFByWVhxK1JGR3FSN2tDd2ttVlgwPQ==" | vercel env add NEXT_PUBLIC_RAGIC_API_KEY development
+echo "c0VySnlCOEJ6dHlndkRHY0pUOTFEMnh6Zmo3VE9lYWdLQUZlVDJQV2M1ZzB5dEYxaUNVWENSS29wekxRL0R6bzBkR1NUaFpVYlJBPQ==" | vercel env add NEXT_PUBLIC_RAGIC_API_KEY production
+echo "c0VySnlCOEJ6dHlndkRHY0pUOTFEMnh6Zmo3VE9lYWdLQUZlVDJQV2M1ZzB5dEYxaUNVWENSS29wekxRL0R6bzBkR1NUaFpVYlJBPQ==" | vercel env add NEXT_PUBLIC_RAGIC_API_KEY preview
+echo "c0VySnlCOEJ6dHlndkRHY0pUOTFEMnh6Zmo3VE9lYWdLQUZlVDJQV2M1ZzB5dEYxaUNVWENSS29wekxRL0R6bzBkR1NUaFpVYlJBPQ==" | vercel env add NEXT_PUBLIC_RAGIC_API_KEY development
 
 echo "31" | vercel env add NEXT_PUBLIC_RAGIC_FORM_ID production
 echo "31" | vercel env add NEXT_PUBLIC_RAGIC_FORM_ID preview
