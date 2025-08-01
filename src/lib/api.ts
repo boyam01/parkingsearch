@@ -8,7 +8,12 @@ const getBaseURL = () => {
     return '/api';
   }
   
-  // 服務端使用完整 URL
+  // 服務端使用完整 URL - Vercel 環境
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}/api`;
+  }
+  
+  // Vercel 預覽環境
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}/api`;
   }
@@ -516,19 +521,19 @@ export class RagicAPI {
       
       const record: VehicleRecord = {
         id: item._ragicId?.toString() || index.toString(),
-        // 使用正確的 Ragic 欄位編號
-        plate: item['1003984'] || '',  // 車牌號碼
-        vehicleType: this.mapVehicleType(item['1003988'] || ''),  // 車輛類型
-        applicantName: item['1003990'] || '',  // 申請人姓名
-        contactPhone: item['1003991'] || '',  // 聯絡電話
-        identityType: this.mapIdentityType(item['1003989'] || ''),  // 身分類別
-        applicationDate: this.formatDate(item['1003992'] || ''),  // 申請日期
-        visitTime: item['1003993'] || '',  // 到訪時間
-        brand: item['1003985'] || '',  // 車輛品牌
-        color: item['1003986'] || '',  // 車輛顏色
-        department: item['1003994'] || '',  // 部門單位
-        approvalStatus: this.mapApprovalStatus(item['1003987'] || ''),  // 審核狀態
-        notes: item['1003995'] || '',  // 備註
+        // 使用中文欄位名稱（Ragic 實際返回的格式）
+        plate: item['車牌號碼'] || '',  // 車牌號碼
+        vehicleType: this.mapVehicleType(item['車輛類型'] || ''),  // 車輛類型
+        applicantName: item['申請人姓名'] || '',  // 申請人姓名
+        contactPhone: item['聯絡電話'] || '',  // 聯絡電話
+        identityType: this.mapIdentityType(item['身份類別'] || ''),  // 身份類別
+        applicationDate: this.formatDate(item['申請日期'] || ''),  // 申請日期
+        visitTime: item['到訪時間'] || '',  // 到訪時間
+        brand: item['車輛品牌'] || '',  // 車輛品牌
+        color: item['車輛顏色'] || '',  // 車輛顏色
+        department: item['部門'] || '',  // 部門單位
+        approvalStatus: this.mapApprovalStatus(item['審核狀態'] || ''),  // 審核狀態
+        notes: item['備註'] || '',  // 備註
         // 申請系統相關欄位 (這些可能需要其他 Ragic 欄位編號)
         applicantEmail: '',
         applicantId: '',
@@ -599,15 +604,19 @@ export class RagicAPI {
   }
 
   private static transformToRagicFormat(vehicle: Partial<VehicleRecord>): any {
-    // 使用正確的 Ragic 欄位編號
+    console.log('🔄 開始轉換車輛資料為 Ragic 格式');
+    console.log('輸入資料:', vehicle);
+    
+    // 使用正確的 Ragic 欄位編號 - 根據開發者確認的 ID
     const ragicData: any = {};
     
-    // 車牌號碼 (1003984) - 必填
+    // 🎯 車牌號碼 (1003984) - 必填
     if (vehicle.plate) {
       ragicData['1003984'] = vehicle.plate;
+      console.log('✅ 車牌號碼:', vehicle.plate);
     }
     
-    // 車輛類型 (1003988) - 必填，根據表單的下拉選項
+    // 🎯 車輛類型 (1003988) - 必填，根據表單的下拉選項
     if (vehicle.vehicleType) {
       const typeMap: { [key: string]: string } = {
         'car': '轎車',
@@ -618,14 +627,42 @@ export class RagicAPI {
         'other': '其他'
       };
       ragicData['1003988'] = typeMap[vehicle.vehicleType] || '轎車';
+      console.log('✅ 車輛類型:', ragicData['1003988']);
     }
     
-    // 到訪時間 (1003986)
+    // 🎯 申請人姓名 (1003990) - 必填
+    if (vehicle.applicantName) {
+      ragicData['1003990'] = vehicle.applicantName;
+      console.log('✅ 申請人姓名:', vehicle.applicantName);
+    }
+    
+    // 🎯 聯絡電話 (1003992) - 必填 
+    if (vehicle.contactPhone) {
+      ragicData['1003992'] = vehicle.contactPhone;
+      console.log('✅ 聯絡電話:', vehicle.contactPhone);
+    }
+    
+    // 🎯 申請日期 (1003994) - 必填，轉換為 yyyy/MM/dd 格式
+    if (vehicle.applicationDate) {
+      const date = new Date(vehicle.applicationDate);
+      if (!isNaN(date.getTime())) {
+        ragicData['1003994'] = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
+        console.log('✅ 申請日期:', ragicData['1003994']);
+      }
+    } else {
+      // 如果沒有提供申請日期，使用今天的日期
+      const today = new Date();
+      ragicData['1003994'] = `${today.getFullYear()}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}`;
+      console.log('✅ 申請日期 (預設今天):', ragicData['1003994']);
+    }
+    
+    // 🎯 到訪時間 (1003986)
     if (vehicle.visitTime) {
       ragicData['1003986'] = vehicle.visitTime;
+      console.log('✅ 到訪時間:', vehicle.visitTime);
     }
     
-    // 身分類別 (1003989) - 根據表單的下拉選項
+    // 🎯 身分類別 (1003989) - 根據表單的下拉選項
     if (vehicle.identityType) {
       const identityMap: { [key: string]: string } = {
         'staff': '同仁',
@@ -636,51 +673,25 @@ export class RagicAPI {
         'guest': '一般訪客'
       };
       ragicData['1003989'] = identityMap[vehicle.identityType] || '訪客';
+      console.log('✅ 身分類別:', ragicData['1003989']);
     }
     
-    // 申請人姓名 (1003990) - 必填
-    if (vehicle.applicantName) {
-      ragicData['1003990'] = vehicle.applicantName;
-    }
-    
-    // 車輛品牌 (1003991)
+    // 🎯 車輛品牌 (1003991)
     if (vehicle.brand) {
       ragicData['1003991'] = vehicle.brand;
+      console.log('✅ 車輛品牌:', vehicle.brand);
     }
     
-    // 聯絡電話 (1003992) - 必填
-    if (vehicle.contactPhone) {
-      ragicData['1003992'] = vehicle.contactPhone;
-    }
-    
-    // 車輛顏色 (1003993)
-    if (vehicle.color) {
-      ragicData['1003993'] = vehicle.color;
-    }
-    
-    // 申請日期 (1003994) - 必填，轉換為 yyyy/MM/dd 格式
-    if (vehicle.applicationDate) {
-      const date = new Date(vehicle.applicationDate);
-      if (!isNaN(date.getTime())) {
-        ragicData['1003994'] = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
-      }
-    } else {
-      // 如果沒有提供申請日期，使用今天的日期
-      const today = new Date();
-      ragicData['1003994'] = `${today.getFullYear()}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}`;
-    }
-    
-    // 部門 (1003995)
+    // 🎯 部門 (1003995)
     if (vehicle.department) {
       ragicData['1003995'] = vehicle.department;
+      console.log('✅ 部門:', vehicle.department);
     }
     
-    // 備註 - 找不到備註欄位編號，暫時略過
-    // if (vehicle.notes) {
-    //   ragicData['備註'] = vehicle.notes;
-    // }
+    // 車輛顜色 - 暫時不加入，需要確認欄位 ID
+    // 備註 - 暫時不加入，需要確認文字欄位 ID
     
-    console.log('轉換為 Ragic 格式 (使用正確欄位編號):', ragicData);
+    console.log('🎉 最終 Ragic 格式資料:', ragicData);
     return ragicData;
   }
 }

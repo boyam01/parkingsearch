@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { SearchBox, SearchStats } from '@/components/SearchBox';
 import { VehicleGrid } from '@/components/VehicleCard';
+import { RefreshNotification, useRefreshNotification } from '@/components/RefreshNotification';
 import { useVehicleSearch } from '@/hooks/useVehicleSearch';
 import { VehicleRecord } from '@/types/vehicle';
 import { cn } from '@/lib/utils';
@@ -50,6 +51,7 @@ export function VehicleSearchPage({
   });
 
   const [showCacheInfo, setShowCacheInfo] = useState(false);
+  const { notification, showLoading, showSuccess, showError, hide } = useRefreshNotification();
 
   // 設定初始查詢
   useEffect(() => {
@@ -74,10 +76,38 @@ export function VehicleSearchPage({
     console.log('匯出車輛資料:', dataToExport);
   };
 
-  // 重新整理資料
-  const handleRefresh = async () => {
-    await refreshData();
+  // 重新整理資料（支援快捷鍵和通知）
+  const handleRefresh = async (event?: React.MouseEvent | boolean) => {
+    const forceClearCache = typeof event === 'boolean' ? event : false;
+    
+    try {
+      showLoading('正在快速重新整理資料...');
+      const startTime = performance.now();
+      
+      await refreshData(forceClearCache);
+      
+      const endTime = performance.now();
+      const duration = (endTime - startTime).toFixed(0);
+      showSuccess(`✅ 重新整理完成！(${duration}ms)`);
+      
+    } catch (error) {
+      showError('❌ 重新整理失敗，請重試');
+      console.error('重新整理錯誤:', error);
+    }
   };
+
+  // 添加快捷鍵支援（Ctrl+R 或 F5）
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey && event.key === 'r') || event.key === 'F5') {
+        event.preventDefault();
+        handleRefresh(event.shiftKey); // Shift+F5 強制清除快取
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className={cn('w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8', className)}>
@@ -148,16 +178,26 @@ export function VehicleSearchPage({
 
               <button
                 onClick={handleRefresh}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  handleRefresh(true); // 右鍵點擊強制清除快取
+                }}
                 disabled={isLoading}
                 className={cn(
                   'flex-1 md:flex-none px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg',
                   'hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed',
-                  'flex items-center justify-center space-x-2 transition-colors text-sm'
+                  'flex items-center justify-center space-x-2 transition-all duration-200 text-sm',
+                  isLoading && 'animate-pulse'
                 )}
-                title="重新整理資料"
+                title={isLoading ? '正在重新整理...' : '重新整理資料 (右鍵強制清除快取, Ctrl+R, F5)'}
               >
-                <RefreshCw className={cn('w-4 h-4 md:w-5 md:h-5', isLoading && 'animate-spin')} />
-                <span className="md:inline">重整</span>
+                <RefreshCw className={cn(
+                  'w-4 h-4 md:w-5 md:h-5 transition-transform duration-200', 
+                  isLoading && 'animate-spin'
+                )} />
+                <span className="md:inline">
+                  {isLoading ? '整理中...' : '重整'}
+                </span>
               </button>
 
               <button
@@ -290,6 +330,14 @@ export function VehicleSearchPage({
           </p>
         </div>
       )}
+
+      {/* 重新整理通知 */}
+      <RefreshNotification
+        isVisible={notification.isVisible}
+        status={notification.status}
+        message={notification.message}
+        onHide={hide}
+      />
     </div>
   );
 }
