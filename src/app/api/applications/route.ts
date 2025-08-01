@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { VehicleRecord, ApplicationResponse } from '@/types/vehicle';
 import { validateApplicationForm, formatApplicationData } from '@/lib/validation';
 import { notificationManager } from '@/lib/notifications';
-
-// 模擬資料庫
-const applications: VehicleRecord[] = [];
+import { RagicAPI } from '@/lib/api';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,7 +20,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 檢查車牌是否已存在
-    const existingApplication = applications.find(app => 
+    const existingApplications = await RagicAPI.getRecords();
+    const existingApplication = existingApplications.find(app => 
       app.plate === formData.plate && app.approvalStatus !== 'rejected'
     );
 
@@ -34,25 +33,25 @@ export async function POST(request: NextRequest) {
     }
 
     // 格式化申請資料
-    const applicationData = formatApplicationData(formData) as VehicleRecord;
+    const applicationData = formatApplicationData(formData) as Partial<VehicleRecord>;
     
     // 添加額外的系統資訊
     const clientIP = request.headers.get('x-forwarded-for') || 
                     request.headers.get('x-real-ip') || 
                     'unknown';
     
-    const fullApplicationData: VehicleRecord = {
+    const fullApplicationData: Partial<VehicleRecord> = {
       ...applicationData,
       ipAddress: clientIP,
       userAgent: request.headers.get('user-agent') || 'unknown'
     };
 
-    // 儲存申請資料（在實際應用中這裡應該儲存到資料庫）
-    applications.push(fullApplicationData);
+    // 儲存申請資料到 Ragic
+    const savedApplication = await RagicAPI.createRecord(fullApplicationData);
 
     // 發送通知
     try {
-      await notificationManager.handleNewApplication(fullApplicationData);
+      await notificationManager.handleNewApplication(savedApplication);
     } catch (notificationError) {
       console.error('發送通知失敗:', notificationError);
       // 通知失敗不影響申請成功
@@ -60,9 +59,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json<ApplicationResponse>({
       success: true,
-      applicationId: fullApplicationData.id,
+      applicationId: savedApplication.id,
       message: '申請提交成功！我們已收到您的申請，將在 1-2 個工作天內審核。',
-      submissionTime: fullApplicationData.createdAt
+      submissionTime: savedApplication.createdAt
     });
 
   } catch (error) {
@@ -83,16 +82,17 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    let filteredApplications = applications;
+    // 從 Ragic 取得申請資料
+    let filteredApplications = await RagicAPI.getRecords();
 
     // 按狀態篩選
     if (status && status !== 'all') {
-      filteredApplications = applications.filter(app => app.approvalStatus === status);
+      filteredApplications = filteredApplications.filter(app => app.approvalStatus === status);
     }
 
     // 排序（最新的在前面）
     filteredApplications.sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime()
     );
 
     // 分頁

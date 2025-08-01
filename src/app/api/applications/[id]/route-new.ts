@@ -46,7 +46,7 @@ export async function PUT(
 ) {
   try {
     const applicationId = params.id;
-    const { action, rejectionReason } = await request.json();
+    const { action, rejectionReason, reviewerId } = await request.json();
     
     if (!['approve', 'reject'].includes(action)) {
       return NextResponse.json({
@@ -55,16 +55,15 @@ export async function PUT(
       }, { status: 400 });
     }
 
-    const applicationIndex = applications.findIndex(app => app.id === applicationId);
+    // 取得現有申請記錄
+    const application = await RagicAPI.getRecordById(applicationId);
     
-    if (applicationIndex === -1) {
+    if (!application) {
       return NextResponse.json({
         success: false,
         message: '找不到指定的申請記錄'
       }, { status: 404 });
     }
-
-    const application = applications[applicationIndex];
     
     // 檢查申請狀態是否可以更新
     if (application.approvalStatus !== 'pending') {
@@ -74,17 +73,19 @@ export async function PUT(
       }, { status: 400 });
     }
 
-    // 更新申請狀態
-    const updatedApplication: VehicleRecord = {
-      ...application,
+    // 準備更新資料
+    const updateData: Partial<VehicleRecord> = {
       approvalStatus: action === 'approve' ? 'approved' : 'rejected',
-      updatedAt: new Date().toISOString(),
-      ...(action === 'reject' && rejectionReason && { 
-        notes: `${application.notes ? application.notes + '\n' : ''}拒絕原因：${rejectionReason}` 
-      })
+      updatedAt: new Date().toISOString()
     };
 
-    applications[applicationIndex] = updatedApplication;
+    // 如果是拒絕，添加拒絕原因到備註
+    if (action === 'reject' && rejectionReason) {
+      updateData.notes = `${application.notes ? application.notes + '\n' : ''}拒絕原因：${rejectionReason}`;
+    }
+
+    // 更新記錄
+    const updatedApplication = await RagicAPI.updateRecord(applicationId, updateData);
 
     // 發送審核結果通知
     try {
@@ -122,22 +123,22 @@ export async function DELETE(
   try {
     const applicationId = params.id;
     
-    const applicationIndex = applications.findIndex(app => app.id === applicationId);
+    // 檢查記錄是否存在
+    const application = await RagicAPI.getRecordById(applicationId);
     
-    if (applicationIndex === -1) {
+    if (!application) {
       return NextResponse.json({
         success: false,
         message: '找不到指定的申請記錄'
       }, { status: 404 });
     }
 
-    // 軟刪除：標記為已拒絕而不是真正刪除
-    applications[applicationIndex] = {
-      ...applications[applicationIndex],
-      approvalStatus: 'rejected',
+    // 軟刪除：標記為已刪除而不是真正刪除
+    await RagicAPI.updateRecord(applicationId, {
+      approvalStatus: 'deleted',
       updatedAt: new Date().toISOString(),
-      notes: `${applications[applicationIndex].notes ? applications[applicationIndex].notes + '\n' : ''}系統刪除：${new Date().toLocaleString('zh-TW')}`
-    };
+      notes: `${application.notes ? application.notes + '\n' : ''}系統刪除：${new Date().toLocaleString('zh-TW')}`
+    });
 
     return NextResponse.json({
       success: true,

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ragic 寫入測試</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        button { padding: 10px 20px; margin: 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .log { background: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; margin: 10px 0; white-space: pre-wrap; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+    </style>
+</head>
+<body>
+    <h1>Ragic API 寫入測試</h1>
+    <button onclick="testRagicWrite()">測試寫入 Ragic</button>
+    <button onclick="clearLogs()">清除日誌</button>
+    
+    <div id="logs"></div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const logDiv = document.createElement('div');
+            logDiv.className = `log ${type}`;
+            logDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logsDiv.appendChild(logDiv);
+            console.log(message);
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        async function testRagicWrite() {
+            log('開始測試 Ragic 寫入...');
+            
+            const apiKey = 'c0VySnlCOEJ6dHlndkRHY0pUOTFEMnh6Zmo3VE9lYWdwbjB5d2tIcTRDZE1GMHB2NUFBUUZVZFByWVhxK1JGR3FSN2tDd2ttVlgwPQ==';
+            const baseURL = 'https://ap7.ragic.com';
+            const accountName = 'xinsheng';
+            const formId = '31';
+            const addRecordId = '-20000';
+            
+            const testData = {
+                '車牌號碼': 'TEST-' + Math.floor(Math.random() * 1000),
+                '車輛類型': '轎車',
+                '申請人姓名': '測試用戶',
+                '聯絡電話': '0912345678',
+                '身份類別': '訪客',
+                '申請日期': '2025/08/01',
+                '備註': '前端寫入測試 - ' + new Date().toLocaleString()
+            };
+            
+            const url = `${baseURL}/${accountName}/ragicforms${formId}/${addRecordId}?api&APIKey=${encodeURIComponent(apiKey)}`;
+            
+            log(`測試 URL: ${url}`);
+            log(`測試資料: ${JSON.stringify(testData, null, 2)}`);
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                log(`回應狀態: ${response.status} ${response.statusText}`);
+                
+                const responseText = await response.text();
+                log(`回應內容: ${responseText}`);
+                
+                if (response.ok) {
+                    try {
+                        const jsonData = JSON.parse(responseText);
+                        log(`解析後的 JSON: ${JSON.stringify(jsonData, null, 2)}`, 'success');
+                        log('✅ 寫入成功！', 'success');
+                    } catch (parseError) {
+                        log('📄 回應不是 JSON 格式，可能是成功的 HTML 回應', 'success');
+                        log('✅ 寫入可能成功！', 'success');
+                    }
+                } else {
+                    log(`❌ HTTP 錯誤: ${response.status} - ${responseText}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ 網路錯誤: ${error.message}`, 'error');
+                console.error('完整錯誤:', error);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack --port 3000",
+    "dev-auto": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "kill-port": "node -e \"require('child_process').exec('netstat -ano | findstr :3000', (e,stdout) => { if(stdout) { const pid = stdout.split(/\\s+/).pop(); require('child_process').exec(`taskkill /f /pid ${pid}`); console.log('Port 3000 cleared'); } else console.log('Port 3000 is free'); })\""
   },
   "dependencies": {
     "axios": "^1.11.0",

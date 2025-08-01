@@ -113,6 +113,64 @@ export function useVehicleSearch(options: UseVehicleSearchOptions = {}): UseVehi
     }
   }, [enableCache, enableOfflineSearch, cache, indexedCache, trie, isDataLoaded]);
 
+  // 正規化函數 - 移除空格、破折號並轉大寫
+  const normalizeString = useCallback((str: string): string => {
+    if (!str) return '';
+    return str.replace(/[\s\-]/g, '').toUpperCase();
+  }, []);
+
+  // 產生子序列正則表達式
+  const createSubsequenceRegex = useCallback((query: string): RegExp => {
+    if (!query) return /^$/;
+    
+    // 正規化查詢字串
+    const normalizedQuery = normalizeString(query);
+    
+    // 將每個字符用 .* 連接，形成子序列匹配模式
+    // 例如: "BC" -> "B.*C", "ABC" -> "A.*B.*C"
+    const regexPattern = normalizedQuery
+      .split('')
+      .map(char => char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) // 轉義特殊字符
+      .join('.*');
+    
+    return new RegExp(regexPattern, 'i');
+  }, [normalizeString]);
+
+  // 增強的子序列模糊搜尋功能
+  const performSubsequenceSearch = useCallback((searchQuery: string, vehicles: VehicleRecord[]): VehicleRecord[] => {
+    if (!searchQuery || searchQuery.length === 0) return [];
+    
+    const regex = createSubsequenceRegex(searchQuery);
+    
+    return vehicles.filter(vehicle => {
+      // 搜尋所有可能的欄位
+      const searchableFields = [
+        vehicle.plate,
+        vehicle.applicantName,
+        vehicle.vehicleType,
+        vehicle.brand || '',
+        vehicle.color || '',
+        vehicle.department || '',
+        vehicle.identityType,
+        vehicle.contactPhone,
+        vehicle.notes || '',
+        vehicle.visitPurpose || ''
+      ];
+      
+      // 對每個欄位進行正規化後用正則表達式匹配
+      return searchableFields.some(field => {
+        if (!field) return false;
+        const normalizedField = normalizeString(field);
+        return regex.test(normalizedField);
+      });
+    });
+  }, [createSubsequenceRegex, normalizeString]);
+
+  // 增強的單字模糊搜尋功能 - 現在使用子序列搜尋
+  const performSingleCharacterSearch = useCallback((searchQuery: string, vehicles: VehicleRecord[]): VehicleRecord[] => {
+    return performSubsequenceSearch(searchQuery, vehicles);
+  }, [performSubsequenceSearch]);
+
   // 執行搜尋
   const performSearch = useCallback(async (searchQuery: string) => {
     if (!searchQuery.trim()) {
@@ -128,12 +186,12 @@ export function useVehicleSearch(options: UseVehicleSearchOptions = {}): UseVehi
       let searchResults: VehicleRecord[] = [];
 
       if (isDataLoaded && allVehicles.length > 0) {
-        // 本地搜尋
-        if (searchQuery.length <= 3) {
-          // 短查詢使用字首樹精確搜尋
-          searchResults = trie.search(searchQuery);
-        } else {
-          // 長查詢使用模糊搜尋
+        // 本地搜尋 - 統一使用子序列模糊搜尋
+        searchResults = performSubsequenceSearch(searchQuery, allVehicles);
+        
+        // 如果子序列搜尋結果太少，回退到傳統搜尋方法
+        if (searchResults.length === 0 && searchQuery.length > 3) {
+          // 使用字首樹模糊搜尋作為備案
           searchResults = trie.fuzzySearch(searchQuery);
         }
       } else {
@@ -161,7 +219,7 @@ export function useVehicleSearch(options: UseVehicleSearchOptions = {}): UseVehi
       setSearchTime(endTime - startTime);
       setIsLoading(false);
     }
-  }, [isDataLoaded, allVehicles, trie, maxResults]);
+  }, [isDataLoaded, allVehicles, trie, maxResults, performSubsequenceSearch]);
 
   // 防抖搜尋
   const debouncedSearch = useMemo(
@@ -206,6 +264,9 @@ export function useVehicleSearch(options: UseVehicleSearchOptions = {}): UseVehi
   useEffect(() => {
     if (query) {
       performSearch(query);
+    } else {
+      setResults([]);
+      setSearchTime(0);
     }
   }, [query, performSearch]);
 

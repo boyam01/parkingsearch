@@ -58,10 +58,23 @@ npm run dev
 # API 設定
 NEXT_PUBLIC_API_BASE_URL=http://localhost:3000/api
 
-# Ragic API 設定（可選）
-NEXT_PUBLIC_RAGIC_BASE_URL=your_ragic_url
-NEXT_PUBLIC_RAGIC_API_KEY=your_api_key
+# Ragic API 設定（推薦用於生產環境）
+NEXT_PUBLIC_RAGIC_BASE_URL=https://www.ragic.com.tw/your-account
+NEXT_PUBLIC_RAGIC_API_KEY=your-api-key
+NEXT_PUBLIC_RAGIC_FORM_ID=your-form-id
 ```
+
+### 資料儲存選項
+
+#### 開發/測試環境
+- **模擬資料**: 8 筆範例車輛記錄
+- **適用**: 功能測試、介面展示
+
+#### 生產環境 (推薦 Ragic)
+- **Ragic 免費版**: 1,000 筆車輛記錄
+- **Ragic 專業版**: 10,000+ 筆車輛記錄
+- **完整功能**: 雲端同步、權限管理、報表分析
+- **設定指南**: 查看 [Ragic 整合說明](./docs/ragic-setup.md)
 
 ## 📖 使用方式
 

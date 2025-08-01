@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { 
   Car, User, Phone, Mail, Calendar, Clock, 
   AlertCircle, CheckCircle, Send, ArrowLeft,
-  Shield, Users, Building2, FileText
+  Shield, Users, Building2, FileText, AlertTriangle
 } from 'lucide-react';
 import { 
   ApplicationFormData, 
@@ -14,12 +14,14 @@ import {
   VEHICLE_TYPES, 
   IDENTITY_TYPES 
 } from '@/types/vehicle';
+import { QuotaStatus } from '@/types/vehicle';
 import { 
   validateApplicationForm, 
   validateField, 
   formatApplicationData
 } from '@/lib/validation';
 import { cn } from '@/lib/utils';
+import QuotaDisplay from './QuotaDisplay';
 
 interface SelfApplicationFormProps {
   className?: string;
@@ -57,6 +59,28 @@ export function SelfApplicationForm({
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<ApplicationResponse | null>(null);
+  const [quotaStatus, setQuotaStatus] = useState<QuotaStatus | null>(null);
+  const [canApply, setCanApply] = useState<{canApply: boolean; reason?: string} | null>(null);
+
+  // 檢查配額狀態
+  const checkQuotaStatus = async (vehicleType?: string, identityType?: string) => {
+    try {
+      const vType = vehicleType || formData.vehicleType;
+      const iType = identityType || formData.identityType;
+      
+      if (!vType || !iType) return;
+      
+      const response = await fetch(`/api/quota?action=check&vehicleType=${vType}&identityType=${iType}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setCanApply(data.data);
+        setQuotaStatus(data.data.quotaStatus);
+      }
+    } catch (error) {
+      console.error('檢查配額失敗:', error);
+    }
+  };
 
   // 表單資料
   const [formData, setFormData] = useState<ApplicationFormData>({
@@ -109,6 +133,14 @@ export function SelfApplicationForm({
       ...prev,
       [fieldName]: error || ''
     }));
+    
+    // 如果是車輛類型或身份類型變更，檢查配額
+    if (fieldName === 'vehicleType' || fieldName === 'identityType') {
+      const updatedData = { ...formData, [fieldName]: value };
+      if (updatedData.vehicleType && updatedData.identityType) {
+        checkQuotaStatus(updatedData.vehicleType, updatedData.identityType);
+      }
+    }
   };
 
   // 驗證當前步驟
@@ -251,6 +283,44 @@ export function SelfApplicationForm({
         <h2 className="text-2xl font-bold text-gray-900">車輛資訊</h2>
         <p className="text-gray-600">請填寫您的車輛相關資訊</p>
       </div>
+
+      {/* 配額狀態警告 */}
+      {canApply && !canApply.canApply && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-start">
+            <AlertTriangle className="w-5 h-5 text-red-500 mr-3 mt-0.5" />
+            <div>
+              <h4 className="text-sm font-medium text-red-800 mb-1">無法申請</h4>
+              <p className="text-sm text-red-700">{canApply.reason}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 配額狀態顯示 */}
+      {quotaStatus && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <h4 className="text-sm font-medium text-blue-800 mb-2">配額狀態</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <span className="text-blue-600">總配額:</span>
+              <span className="ml-1 font-medium">{quotaStatus.totalUsed} / {quotaStatus.totalUsed + quotaStatus.totalAvailable}</span>
+            </div>
+            <div>
+              <span className="text-blue-600">使用率:</span>
+              <span className="ml-1 font-medium">{quotaStatus.usageRate.toFixed(1)}%</span>
+            </div>
+            <div>
+              <span className="text-blue-600">今日申請:</span>
+              <span className="ml-1 font-medium">{quotaStatus.dailyApplications}</span>
+            </div>
+            <div>
+              <span className="text-blue-600">可用配額:</span>
+              <span className="ml-1 font-medium text-green-600">{quotaStatus.totalAvailable}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>

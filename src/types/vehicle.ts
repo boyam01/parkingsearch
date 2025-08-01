@@ -11,7 +11,7 @@ export interface VehicleRecord {
   brand?: string; // 車輛品牌
   color?: string; // 車輛顏色
   department?: string; // 部門或單位
-  approvalStatus: 'pending' | 'approved' | 'rejected'; // 審核狀態
+  approvalStatus: 'pending' | 'approved' | 'rejected' | 'deleted'; // 審核狀態
   notes?: string; // 備註
   // 新增申請者建檔相關欄位
   applicantEmail?: string; // 申請人信箱
@@ -25,6 +25,49 @@ export interface VehicleRecord {
   submittedBy: 'self' | 'admin'; // 申請方式
   ipAddress?: string; // 申請來源 IP
   userAgent?: string; // 瀏覽器資訊
+}
+
+// 車輛總量配置
+export interface VehicleQuotaConfig {
+  totalQuota: number; // 總配額
+  quotaByType: {
+    car: number; // 汽車配額
+    motorcycle: number; // 機車配額
+    truck: number; // 卡車配額
+  };
+  quotaByIdentity: {
+    staff: number; // 員工配額
+    visitor: number; // 訪客配額
+    contractor: number; // 承包商配額
+    guest: number; // 賓客配額
+    vip: number; // VIP配額
+  };
+  dailyApplicationLimit: number; // 每日申請限制
+  enableQuotaControl: boolean; // 是否啟用配額控制
+  enableWaitingList: boolean; // 是否啟用候補名單
+  quotaWarningThreshold: number; // 配額警告閾值 (百分比)
+}
+
+// 配額狀態
+export interface QuotaStatus {
+  totalUsed: number;
+  totalAvailable: number;
+  usageRate: number; // 使用率百分比
+  byType: {
+    car: { used: number; available: number; rate: number };
+    motorcycle: { used: number; available: number; rate: number };
+    truck: { used: number; available: number; rate: number };
+  };
+  byIdentity: {
+    staff: { used: number; available: number; rate: number };
+    visitor: { used: number; available: number; rate: number };
+    contractor: { used: number; available: number; rate: number };
+    guest: { used: number; available: number; rate: number };
+    vip: { used: number; available: number; rate: number };
+  };
+  dailyApplications: number;
+  isOverLimit: boolean;
+  warnings: string[];
 }
 
 // 搜尋結果型別

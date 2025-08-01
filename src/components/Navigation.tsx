@@ -32,16 +32,34 @@ const navItems: NavItem[] = [
     description: '自助申請車輛停車權限'
   },
   {
+    href: '/membership/apply',
+    label: '月租申請',
+    icon: Car,
+    description: '申請月租車位'
+  },
+  {
+    href: '/management',
+    label: '資料管理',
+    icon: Settings,
+    description: '即時管理 Ragic 資料庫'
+  },
+  {
     href: '/dashboard',
     label: '儀錶板',
     icon: BarChart3,
     description: '統計分析與報表'
   },
   {
-    href: '/manage',
-    label: '車輛管理',
+    href: '/search-test',
+    label: '搜尋測試',
+    icon: Search,
+    description: '測試子序列模糊搜尋功能'
+  },
+  {
+    href: '/test-new',
+    label: '功能測試',
     icon: Settings,
-    description: '管理所有車輛記錄'
+    description: '測試所有新功能'
   }
 ];
 
