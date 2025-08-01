@@ -59,17 +59,31 @@ export class VehicleAPI {
   // 取得所有車輛記錄
   static async getAllVehicles(): Promise<VehicleRecord[]> {
     try {
+      console.log('VehicleAPI: 開始取得車輛資料...');
       const response = await api.get<ApiResponse<VehicleRecord[]>>('/vehicles');
+      console.log('VehicleAPI: API 回應:', response.data);
       
       if (response.data.success) {
+        console.log('VehicleAPI: 成功取得', response.data.data.length, '筆記錄');
         return response.data.data;
       } else {
+        console.error('VehicleAPI: API 回應失敗:', response.data.error);
         throw new Error(response.data.error || '取得車輛資料失敗');
       }
     } catch (error) {
-      console.error('取得車輛資料失敗:', error);
-      // 返回模擬資料作為備案
-      return this.getMockData();
+      console.error('VehicleAPI: 取得車輛資料失敗:', error);
+      
+      // 如果是網路錯誤或 API 錯誤，嘗試直接呼叫 Ragic API
+      try {
+        console.log('VehicleAPI: 嘗試直接從 Ragic 取得資料...');
+        const ragicData = await RagicAPI.getRecords();
+        console.log('VehicleAPI: 直接從 Ragic 取得', ragicData.length, '筆記錄');
+        return ragicData;
+      } catch (ragicError) {
+        console.error('VehicleAPI: 直接從 Ragic 取得資料也失敗:', ragicError);
+        // 最後才返回空陣列，而不是模擬資料
+        return [];
+      }
     }
   }
 
