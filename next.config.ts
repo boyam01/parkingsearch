@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // 明確指定輸出目錄為預設的 .next（根目錄）
+  distDir: '.next',
   eslint: {
     ignoreDuringBuilds: true,
   },
