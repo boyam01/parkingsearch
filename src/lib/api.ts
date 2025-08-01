@@ -205,32 +205,54 @@ export class RagicAPI {
     // 強制使用 Ragic 資料庫，不使用模擬資料
     try {
       const apiKey = this.apiKey?.trim() || '';
+      if (!apiKey) {
+        console.error('❌ RAGIC_API_KEY 未設定！');
+        throw new Error('RAGIC_API_KEY 未設定，請檢查環境變數');
+      }
+
       const url = `${this.baseURL}/${this.accountName}/ragicforms${this.formId}/${this.subtableId}?api&APIKey=${encodeURIComponent(apiKey)}`;
-      console.log('Ragic API URL:', url);
+      console.log('🚀 Ragic API URL:', url);
       
       const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
+          'User-Agent': 'ParkingSearch/1.0',
         }
       });
 
+      console.log('📡 Ragic 回應狀態:', response.status);
+      console.log('📡 Ragic 回應標頭:', Object.fromEntries(response.headers));
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ Ragic HTTP 錯誤:', response.status, errorText);
+        throw new Error(`Ragic API 錯誤 ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('Ragic Response:', data);
+      console.log('📊 Ragic 原始回應資料:', data);
 
       // 轉換 Ragic 資料格式為我們的格式
       const transformedData = this.transformRagicData(data);
-      console.log('轉換後的資料:', transformedData);
+      console.log('✅ 最終轉換資料筆數:', transformedData.length);
+      
+      if (transformedData.length === 0) {
+        console.warn('⚠️ 警告：Ragic 回傳了空資料！請檢查表單是否有記錄');
+      }
       
       return transformedData;
     } catch (error) {
-      console.error('Ragic API 錯誤:', error);
-      // 即使發生錯誤也不使用模擬資料，返回空陣列
-      return [];
+      console.error('💥 Ragic API 錯誤:', error);
+      
+      // 如果是網路問題，提供更詳細的錯誤資訊
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.error('🌍 網路連接問題：無法連接到 Ragic 伺服器');
+        throw new Error('無法連接到 Ragic 伺服器，請檢查網路連接');
+      }
+      
+      // 重新拋出錯誤，不返回空陣列
+      throw error;
     }
   }
 
@@ -399,41 +421,55 @@ export class RagicAPI {
   }
 
   private static transformRagicData(ragicData: any): VehicleRecord[] {
-    console.log('原始 Ragic 資料:', ragicData);
-    console.log('資料類型:', typeof ragicData);
-    console.log('是否為陣列:', Array.isArray(ragicData));
+    console.log('🔍 原始 Ragic 資料:', ragicData);
+    console.log('🔍 資料類型:', typeof ragicData);
+    console.log('🔍 是否為陣列:', Array.isArray(ragicData));
     
     // 根據 Ragic 的資料結構進行轉換
     if (!ragicData) {
-      console.log('無資料返回空陣列');
+      console.log('⚠️ 無資料返回空陣列');
       return [];
     }
 
     // 將物件轉換為陣列
     const dataArray = Array.isArray(ragicData) ? ragicData : Object.values(ragicData);
-    console.log('轉換後的資料陣列:', dataArray);
-    console.log('陣列長度:', dataArray.length);
+    console.log('📊 轉換後的資料陣列:', dataArray);
+    console.log('📊 陣列長度:', dataArray.length);
+
+    if (dataArray.length === 0) {
+      console.log('⚠️ 資料陣列為空');
+      return [];
+    }
 
     return dataArray.map((item: any, index: number) => {
-      console.log(`處理第 ${index} 筆資料:`, item);
-      console.log('可用的欄位:', Object.keys(item));
+      console.log(`🚀 處理第 ${index + 1} 筆資料:`, item);
+      console.log(`🔑 可用的欄位:`, Object.keys(item));
+      
+      // 檢查特定欄位的值 - 🔥 使用中文欄位名稱（Ragic 實際回傳的）
+      const carPlate = item["車牌號碼"];
+      const applicant = item["申請人姓名"];  
+      const type = item["車輛類型"];
+      
+      console.log(`🏷️ 車牌欄位 (車牌號碼):`, carPlate, typeof carPlate);
+      console.log(`👤 申請人欄位 (申請人姓名):`, applicant, typeof applicant);
+      console.log(`🚗 車輛類型欄位 (車輛類型):`, type, typeof type);
       
       const record: VehicleRecord = {
-        id: item._ragicId?.toString() || index.toString(),
-        // 使用您提供的正確 Ragic 欄位編號
-        plate: item['1003984'] || '',  // 車牌號碼
-        vehicleType: this.mapVehicleType(item['1003988'] || ''),  // 車輛類型
-        applicantName: item['1003990'] || '',  // 申請人姓名
-        contactPhone: item['1003992'] || '',  // 聯絡電話
-        identityType: this.mapIdentityType(item['1003989'] || ''),  // 身分類別
-        applicationDate: this.formatDate(item['1003994'] || ''),  // 申請日期
-        visitTime: item['1003986'] || '',  // 到訪時間
-        brand: item['1003991'] || '',  // 車輛品牌
-        color: '',  // 車輛顏色 (未提供欄位編號)
-        department: item['1003995'] || '',  // 部門
-        approvalStatus: 'pending',  // 審核狀態 (未提供欄位編號，預設為 pending)
-        notes: '',  // 備註 (未提供欄位編號)
-        // 申請系統相關欄位 (這些可能需要其他 Ragic 欄位編號)
+        id: item._ragicId?.toString() || `temp_${index}`,
+        // � 使用中文欄位名稱 - Ragic 實際回傳的格式
+        plate: String(carPlate || `未知車牌-${index}`).trim(),  // 車牌號碼
+        applicantName: String(applicant || '').trim(),  // 申請人姓名
+        vehicleType: this.mapVehicleType(type || ''),  // 車輛類型
+        contactPhone: String(item['聯絡電話'] || '').trim(),  // 聯絡電話
+        identityType: this.mapIdentityType(item['身份類別'] || ''),  // 身分類別
+        applicationDate: this.formatDate(item['申請日期'] || ''),  // 申請日期
+        visitTime: String(item['到訪時間'] || '').trim(),  // 到訪時間
+        brand: String(item['車輛品牌'] || '').trim(),  // 車輛品牌
+        color: String(item['車輛顏色'] || '').trim(),  // 車輛顏色
+        department: String(item['部門'] || '').trim(),  // 部門
+        approvalStatus: 'pending',  
+        notes: String(item['備註'] || '').trim(),  // 備註  
+        // 申請系統相關欄位
         applicantEmail: '',
         applicantId: '',
         emergencyContact: '',
@@ -443,11 +479,17 @@ export class RagicAPI {
         submittedBy: 'self',
         ipAddress: '',
         userAgent: '',
-        createdAt: item._ragic_createdate || new Date(item._dataTimestamp || Date.now()).toISOString(),
-        updatedAt: item._ragic_modifydate || new Date(item._dataTimestamp || Date.now()).toISOString()
+        createdAt: item._ragic_createdate || new Date().toISOString(),
+        updatedAt: item._ragic_modifydate || new Date().toISOString()
       };
       
-      console.log('轉換後的記錄:', record);
+      console.log(`✅ 轉換後的記錄 #${index + 1}:`, {
+        id: record.id,
+        plate: record.plate,
+        applicantName: record.applicantName,
+        vehicleType: record.vehicleType
+      });
+      
       return record;
     });
   }
@@ -503,7 +545,7 @@ export class RagicAPI {
   }
 
   private static transformToRagicFormat(vehicle: Partial<VehicleRecord>): any {
-    // 使用正確的 Ragic 欄位編號
+    // 使用新的正確 Ragic 欄位編號
     const ragicData: any = {};
     
     // 車牌號碼 (1003984) - 必填
@@ -511,7 +553,12 @@ export class RagicAPI {
       ragicData['1003984'] = vehicle.plate;
     }
     
-    // 車輛類型 (1003988) - 必填，根據表單的下拉選項
+    // 申請人姓名 (1003985) - 必填
+    if (vehicle.applicantName) {
+      ragicData['1003985'] = vehicle.applicantName;
+    }
+    
+    // 車輛類型 (1003986) - 必填，根據表單的下拉選項
     if (vehicle.vehicleType) {
       const typeMap: { [key: string]: string } = {
         'car': '轎車',
@@ -521,12 +568,17 @@ export class RagicAPI {
         'vip': '貴賓用車',
         'other': '其他'
       };
-      ragicData['1003988'] = typeMap[vehicle.vehicleType] || '轎車';
+      ragicData['1003986'] = typeMap[vehicle.vehicleType] || '轎車';
     }
     
-    // 到訪時間 (1003986)
+    // 到訪時間 (1003987)
     if (vehicle.visitTime) {
-      ragicData['1003986'] = vehicle.visitTime;
+      ragicData['1003987'] = vehicle.visitTime;
+    }
+    
+    // 車輛顏色 (1003988)
+    if (vehicle.color) {
+      ragicData['1003988'] = vehicle.color;
     }
     
     // 身分類別 (1003989) - 根據表單的下拉選項
@@ -540,11 +592,6 @@ export class RagicAPI {
         'guest': '一般訪客'
       };
       ragicData['1003989'] = identityMap[vehicle.identityType] || '訪客';
-    }
-    
-    // 申請人姓名 (1003990) - 必填
-    if (vehicle.applicantName) {
-      ragicData['1003990'] = vehicle.applicantName;
     }
     
     // 車輛品牌 (1003991)
@@ -574,12 +621,12 @@ export class RagicAPI {
       ragicData['1003995'] = vehicle.department;
     }
     
-    // 備註 - 找不到備註欄位編號，暫時略過
-    // if (vehicle.notes) {
-    //   ragicData['備註'] = vehicle.notes;
-    // }
+    // 備註 (1003996)
+    if (vehicle.notes) {
+      ragicData['1003996'] = vehicle.notes;
+    }
     
-    console.log('轉換為 Ragic 格式 (使用正確欄位編號):', ragicData);
+    console.log('🔄 轉換為 Ragic 格式 (使用新欄位編號):', ragicData);
     return ragicData;
   }
 }
