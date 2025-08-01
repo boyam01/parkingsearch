@@ -55,6 +55,8 @@ export async function PUT(
       }, { status: 400 });
     }
 
+    // 取得所有申請記錄
+    const applications = await RagicAPI.getRecords();
     const applicationIndex = applications.findIndex(app => app.id === applicationId);
     
     if (applicationIndex === -1) {
@@ -84,7 +86,8 @@ export async function PUT(
       })
     };
 
-    applications[applicationIndex] = updatedApplication;
+    // 使用 RagicAPI 更新記錄
+    const result = await RagicAPI.updateRecord(applicationId, updatedApplication);
 
     // 發送審核結果通知
     try {
@@ -122,9 +125,11 @@ export async function DELETE(
   try {
     const applicationId = params.id;
     
-    const applicationIndex = applications.findIndex(app => app.id === applicationId);
+    // 取得所有申請記錄
+    const applications = await RagicAPI.getRecords();
+    const application = applications.find((app: VehicleRecord) => app.id === applicationId);
     
-    if (applicationIndex === -1) {
+    if (!application) {
       return NextResponse.json({
         success: false,
         message: '找不到指定的申請記錄'
@@ -132,12 +137,15 @@ export async function DELETE(
     }
 
     // 軟刪除：標記為已拒絕而不是真正刪除
-    applications[applicationIndex] = {
-      ...applications[applicationIndex],
+    const updatedApplication: VehicleRecord = {
+      ...application,
       approvalStatus: 'rejected',
       updatedAt: new Date().toISOString(),
-      notes: `${applications[applicationIndex].notes ? applications[applicationIndex].notes + '\n' : ''}系統刪除：${new Date().toLocaleString('zh-TW')}`
+      notes: `${application.notes ? application.notes + '\n' : ''}系統刪除：${new Date().toLocaleString('zh-TW')}`
     };
+
+    // 使用 RagicAPI 更新記錄
+    await RagicAPI.updateRecord(applicationId, updatedApplication);
 
     return NextResponse.json({
       success: true,

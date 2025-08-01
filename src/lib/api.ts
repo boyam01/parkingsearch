@@ -25,7 +25,7 @@ const getBaseURL = () => {
 // API 基礎設定
 const api = axios.create({
   baseURL: getBaseURL(),
-  timeout: 10000,
+  timeout: 30000, // 增加到 30 秒以處理 Vercel 部署環境的延遲
   headers: {
     'Content-Type': 'application/json',
   },
@@ -58,32 +58,52 @@ api.interceptors.response.use(
 export class VehicleAPI {
   // 取得所有車輛記錄
   static async getAllVehicles(): Promise<VehicleRecord[]> {
-    try {
-      console.log('VehicleAPI: 開始取得車輛資料...');
-      const response = await api.get<ApiResponse<VehicleRecord[]>>('/vehicles');
-      console.log('VehicleAPI: API 回應:', response.data);
-      
-      if (response.data.success) {
-        console.log('VehicleAPI: 成功取得', response.data.data.length, '筆記錄');
-        return response.data.data;
-      } else {
-        console.error('VehicleAPI: API 回應失敗:', response.data.error);
-        throw new Error(response.data.error || '取得車輛資料失敗');
-      }
-    } catch (error) {
-      console.error('VehicleAPI: 取得車輛資料失敗:', error);
-      
-      // 如果是網路錯誤或 API 錯誤，嘗試直接呼叫 Ragic API
+    const maxRetries = 2;
+    let lastError: any = null;
+
+    // 重試機制
+    for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
       try {
-        console.log('VehicleAPI: 嘗試直接從 Ragic 取得資料...');
-        const ragicData = await RagicAPI.getRecords();
-        console.log('VehicleAPI: 直接從 Ragic 取得', ragicData.length, '筆記錄');
-        return ragicData;
-      } catch (ragicError) {
-        console.error('VehicleAPI: 直接從 Ragic 取得資料也失敗:', ragicError);
-        // 返回空陣列，不使用模擬資料
-        return [];
+        console.log(`VehicleAPI: 第 ${attempt} 次嘗試取得車輛資料...`);
+        const response = await api.get<ApiResponse<VehicleRecord[]>>('/vehicles');
+        console.log('VehicleAPI: API 回應:', response.data);
+        
+        if (response.data.success) {
+          console.log('VehicleAPI: 成功取得', response.data.data.length, '筆記錄');
+          return response.data.data;
+        } else {
+          console.error('VehicleAPI: API 回應失敗:', response.data.error);
+          throw new Error(response.data.error || '取得車輛資料失敗');
+        }
+      } catch (error) {
+        lastError = error;
+        console.error(`VehicleAPI: 第 ${attempt} 次嘗試失敗:`, error);
+        
+        // 如果不是最後一次嘗試，等待一段時間後重試
+        if (attempt < maxRetries + 1) {
+          const waitTime = attempt * 1000; // 遞增等待時間：1秒、2秒
+          console.log(`VehicleAPI: 等待 ${waitTime}ms 後重試...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
       }
+    }
+
+    // 所有重試都失敗後，嘗試直接呼叫 Ragic API
+    try {
+      console.log('VehicleAPI: 所有 API 重試失敗，嘗試直接從 Ragic 取得資料...');
+      const ragicData = await RagicAPI.getRecords();
+      console.log('VehicleAPI: 直接從 Ragic 取得', ragicData.length, '筆記錄');
+      return ragicData;
+    } catch (ragicError) {
+      console.error('VehicleAPI: 直接從 Ragic 取得資料也失敗:', ragicError);
+      
+      // 記錄所有錯誤但不拋出例外，返回空陣列確保前端不會崩潰
+      console.error('VehicleAPI: 所有資料來源都失敗，返回空陣列');
+      console.error('VehicleAPI: 最後的 API 錯誤:', lastError);
+      console.error('VehicleAPI: 最後的 Ragic 錯誤:', ragicError);
+      
+      return []; // 返回空陣列，不拋出例外
     }
   }
 

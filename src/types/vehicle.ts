@@ -187,5 +187,6 @@ export const VEHICLE_TYPES = {
 export const APPROVAL_STATUS = {
   pending: { label: '待審核', color: 'bg-yellow-100 text-yellow-800' },
   approved: { label: '已通過', color: 'bg-green-100 text-green-800' },
-  rejected: { label: '已拒絕', color: 'bg-red-100 text-red-800' }
+  rejected: { label: '已拒絕', color: 'bg-red-100 text-red-800' },
+  deleted: { label: '已刪除', color: 'bg-gray-100 text-gray-800' }
 } as const;
