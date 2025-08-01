@@ -11,7 +11,13 @@ interface PageProps {
   };
 }
 
-// 產生頁面中繼資料
+// App Router: 產生靜態參數（取代 generateStaticPaths）
+export async function generateStaticParams() {
+  // 返回空陣列，讓所有動態路由都使用 on-demand Server Rendering
+  return [];
+}
+
+// App Router: 產生頁面中繼資料
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const plate = decodeURIComponent(params.plate);
   const formattedPlate = formatPlate(plate);
@@ -49,51 +55,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-// 靜態路徑產生（用於預渲染常用車牌）
-export async function generateStaticPaths() {
-  // 在生產環境中，可以預渲染一些常用的車牌
-  // 這裡暫時返回空陣列，讓所有路徑都使用 ISR
-  return {
-    paths: [],
-    fallback: 'blocking' // 使用 ISR (Incremental Static Regeneration)
-  };
-}
-
-// 靜態屬性產生
-export async function generateStaticProps({ params }: PageProps) {
-  const plate = decodeURIComponent(params.plate);
-
-  // 驗證車牌格式
-  if (!validatePlate(plate)) {
-    return {
-      notFound: true,
-    };
-  }
-
-  try {
-    const vehicle = await VehicleAPI.getVehicleByPlate(plate);
-
-    return {
-      props: {
-        vehicle,
-        plate: formatPlate(plate),
-      },
-      revalidate: 300, // 5分鐘重新驗證
-    };
-  } catch (error) {
-    console.error('取得車輛資料時發生錯誤:', error);
-    
-    return {
-      props: {
-        vehicle: null,
-        plate: formatPlate(plate),
-      },
-      revalidate: 60, // 1分鐘重新驗證（錯誤情況下更頻繁）
-    };
-  }
-}
-
-export default function VehicleQueryPageRoute({ params }: PageProps) {
+// App Router: 頁面元件（Server Component）
+export default async function VehicleQueryPageRoute({ params }: PageProps) {
   const plate = decodeURIComponent(params.plate);
 
   // 驗證車牌格式
@@ -101,5 +64,15 @@ export default function VehicleQueryPageRoute({ params }: PageProps) {
     notFound();
   }
 
-  return <VehicleQueryPage plate={plate} />;
+  // 在伺服器端取得資料
+  let vehicle = null;
+  try {
+    vehicle = await VehicleAPI.getVehicleByPlate(plate);
+  } catch (error) {
+    console.error('取得車輛資料時發生錯誤:', error);
+    // 不拋出錯誤，讓元件處理空資料狀態
+  }
+
+  // 傳遞資料給客戶端元件
+  return <VehicleQueryPage plate={plate} initialVehicle={vehicle} />;
 }
