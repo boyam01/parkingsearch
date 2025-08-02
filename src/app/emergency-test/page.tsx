@@ -27,13 +27,11 @@ export default function EmergencyTest() {
     const results: any = {};
 
     try {
-      // 測試 1: 環境變數檢查
+      // 測試 1: 環境變數檢查（注意：Ragic 相關變數已移至後端）
       results.env = {
-        RAGIC_API_KEY: process.env.NEXT_PUBLIC_RAGIC_API_KEY ? '✅ 已設定' : '❌ 未設定',
-        RAGIC_BASE_URL: process.env.NEXT_PUBLIC_RAGIC_BASE_URL || '❌ 未設定',
-        RAGIC_ACCOUNT: process.env.NEXT_PUBLIC_RAGIC_ACCOUNT || '❌ 未設定',
-        RAGIC_FORM_ID: process.env.NEXT_PUBLIC_RAGIC_FORM_ID || '❌ 未設定',
-        RAGIC_SUBTABLE_ID: process.env.NEXT_PUBLIC_RAGIC_SUBTABLE_ID || '❌ 未設定'
+        NODE_ENV: process.env.NODE_ENV || '❌ 未設定',
+        VERCEL_ENV: process.env.VERCEL_ENV || '本地開發',
+        API_STATUS: '⚠️ 需透過後端 API 路由測試 Ragic 連線'
       };
 
       // 測試 2: API 連接測試和車牌分析
@@ -79,22 +77,21 @@ export default function EmergencyTest() {
 
       // 測試 3: 直接 Ragic 測試
       try {
-        const ragicUrl = `https://ap7.ragic.com/xinsheng/ragicforms31/6?api&APIKey=${encodeURIComponent(process.env.NEXT_PUBLIC_RAGIC_API_KEY || '')}`;
-        const ragicResponse = await fetch(ragicUrl);
-        const ragicData = await ragicResponse.json();
+        // 改用後端 API 路由測試連線
+        const apiResponse = await fetch('/api/vehicles');
+        const apiData = await apiResponse.json();
         
         results.ragic = {
-          status: ragicResponse.ok ? '✅ 成功' : '❌ 失敗',
-          statusCode: ragicResponse.status,
-          dataType: typeof ragicData,
-          isArray: Array.isArray(ragicData),
-          keys: typeof ragicData === 'object' ? Object.keys(ragicData) : [],
-          recordCount: Array.isArray(ragicData) ? ragicData.length : (typeof ragicData === 'object' ? Object.keys(ragicData).length : 0),
-          firstRecord: typeof ragicData === 'object' && !Array.isArray(ragicData) ? ragicData[Object.keys(ragicData)[0]] : null
+          status: apiResponse.ok ? '✅ 成功' : '❌ 失敗',
+          statusCode: apiResponse.status,
+          message: apiData.success ? '透過後端 API 路由成功連接' : '後端 API 路由連接失敗',
+          dataCount: apiData.success && apiData.data ? apiData.data.length : 0,
+          error: apiData.error || null,
+          firstRecord: apiData.success && apiData.data && apiData.data.length > 0 ? apiData.data[0] : null
         };
       } catch (error) {
         results.ragic = {
-          status: '❌ 直接連接失敗',
+          status: '❌ API 路由連接失敗',
           error: error instanceof Error ? error.message : '未知錯誤'
         };
       }

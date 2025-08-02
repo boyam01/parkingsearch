@@ -175,12 +175,14 @@ export default function RagicTestPage() {
         {/* 配置資訊 */}
         <div className="bg-white rounded-lg shadow p-6 mt-6">
           <h2 className="text-xl font-semibold mb-4">當前配置</h2>
-          <div className="space-y-2 text-sm">
-            <p><span className="font-medium">Base URL:</span> {process.env.NEXT_PUBLIC_RAGIC_BASE_URL}</p>
-            <p><span className="font-medium">Account:</span> {process.env.NEXT_PUBLIC_RAGIC_ACCOUNT}</p>
-            <p><span className="font-medium">Form ID:</span> {process.env.NEXT_PUBLIC_RAGIC_FORM_ID}</p>
-            <p><span className="font-medium">Subtable ID:</span> {process.env.NEXT_PUBLIC_RAGIC_SUBTABLE_ID}</p>
-            <p><span className="font-medium">API Key:</span> {process.env.NEXT_PUBLIC_RAGIC_API_KEY ? '已設定 ✅' : '未設定 ❌'}</p>
+          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+            <h4 className="font-semibold mb-2 text-yellow-800">⚠️ 環境變數配置提醒</h4>
+            <p className="text-sm text-yellow-700 mb-2">
+              由於安全性考量，Ragic API 金鑰已移至後端專用環境變數，前端無法直接顯示。
+            </p>
+            <p className="text-sm text-yellow-700">
+              請使用 <code className="bg-yellow-200 px-1 rounded">/debug-ragic</code> 頁面進行完整的 API 連線測試。
+            </p>
           </div>
         </div>
       </div>

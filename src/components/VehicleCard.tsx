@@ -22,7 +22,7 @@ export function VehicleCard({
 }: VehicleCardProps) {
   const identityConfig = IDENTITY_TYPES[vehicle.identityType as keyof typeof IDENTITY_TYPES] || IDENTITY_TYPES.visitor;
   const vehicleConfig = VEHICLE_TYPES[vehicle.vehicleType as keyof typeof VEHICLE_TYPES] || VEHICLE_TYPES.other;
-  const statusConfig = APPROVAL_STATUS[vehicle.approvalStatus];
+  const statusConfig = APPROVAL_STATUS[vehicle.approvalStatus as keyof typeof APPROVAL_STATUS] || APPROVAL_STATUS.pending;
 
   const handleClick = () => {
     if (onClick) {

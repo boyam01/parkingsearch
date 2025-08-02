@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { SearchBox, SearchStats } from '@/components/SearchBox';
 import { VehicleGrid } from '@/components/VehicleCard';
-import { useVehicleSearch } from '@/hooks/useVehicleSearch';
+import { useVehicleSearch } from '../hooks/useVehicleSearch';
 import { VehicleRecord } from '@/types/vehicle';
 import { cn } from '@/lib/utils';
 import { RefreshCw, Download, Settings, Info, Plus } from 'lucide-react';
@@ -45,7 +45,7 @@ export function VehicleSearchPage({
   } = useVehicleSearch({
     enableCache: true,
     enableOfflineSearch: true,
-    debounceDelay: 300,
+    debounceDelay: 150, // 減少延遲時間，讓搜尋更即時
     maxResults: 50
   });
 
@@ -76,7 +76,18 @@ export function VehicleSearchPage({
 
   // 重新整理資料
   const handleRefresh = async () => {
-    await refreshData();
+    try {
+      console.log('🔄 用戶點擊重整按鈕');
+      await refreshData();
+      console.log('✅ 重整完成');
+      
+      // 可以在這裡添加成功提示
+      // 例如：showToast('資料已重新整理完成')
+    } catch (error) {
+      console.error('❌ 重整失敗:', error);
+      // 這裡可以添加錯誤提示
+      // 例如：showToast('重整失敗，請稍後再試', 'error')
+    }
   };
 
   return (
@@ -107,15 +118,21 @@ export function VehicleSearchPage({
               autoFocus
               size="lg"
             />
-            {/* 新增搜尋提示 */}
+            {/* 搜尋提示和狀態 */}
             <div className="mt-2 text-xs md:text-sm text-gray-500">
-              💡 <strong>子序列搜尋：</strong>
-              輸入 "BC" 可找到 "ABC-4567"、"ABC1234" 等包含 B 和 C 的記錄
-              {query && (
-                <span className="ml-2 text-blue-600">
-                  正在搜尋包含 "{query}" 子序列的記錄...
-                </span>
-              )}
+              <div className="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-1 md:space-y-0">
+                <div>
+                  💡 <strong>智能搜尋：</strong>
+                  支援車牌、姓名、電話、車型等多欄位查詢
+                </div>
+                {query && (
+                  <div className="text-blue-600 font-medium">
+                    {isLoading && '🔍 搜尋中...'}
+                    {!isLoading && results.length > 0 && `✅ 找到 ${results.length} 筆匹配記錄`}
+                    {!isLoading && results.length === 0 && '❌ 沒有找到匹配記錄'}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

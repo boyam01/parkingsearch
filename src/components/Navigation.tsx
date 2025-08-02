@@ -44,10 +44,10 @@ const navItems: NavItem[] = [
     description: '測試強制寫入 Ragic 資料庫'
   },
   {
-    href: '/management',
-    label: '資料管理',
+    href: '/manage',
+    label: '車輛管理',
     icon: Settings,
-    description: '即時管理 Ragic 資料庫'
+    description: '完整的車輛資料管理系統'
   },
   {
     href: '/dashboard',

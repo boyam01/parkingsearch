@@ -1,223 +1,139 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ragicConfig, validateRagicConfig, RagicDataTransformer } from '@/config/ragicConfig';
 
-// 智能回應接口
-interface SmartVehicleResponse {
+// 🎯 優化的回應接口
+interface OptimizedVehicleResponse {
   success: boolean;
   data?: any[];
   total?: number;
   filteredCount?: number;
   cached?: boolean;
-  cacheStatus?: string;
   queryTime?: number;
   error?: string;
   message?: string;
 }
 
-// 🚀 智能快取系統
+// 🚀 快取系統
 class VehicleDataCache {
   private static cache: {
     data: any[] | null;
     timestamp: number;
-    ttl: number;
-    isInitialized: boolean;
-    lastRefresh: number;
+    ttl: number; // 存活時間 (毫秒)
   } = {
     data: null,
     timestamp: 0,
-    ttl: 300000, // 5 分鐘快取 (除非手動重整)
-    isInitialized: false,
-    lastRefresh: 0
+    ttl: 60000 // 1 分鐘快取
   };
 
-  // 檢查是否需要初始載入
-  static needsInitialLoad(): boolean {
-    return !this.cache.isInitialized || this.cache.data === null;
-  }
-
-  // 檢查快取是否有效 (僅用於非手動重整)
   static isValid(): boolean {
-    if (!this.cache.isInitialized || this.cache.data === null) {
-      return false;
-    }
     const now = Date.now();
-    return (now - this.cache.timestamp) < this.cache.ttl;
+    return this.cache.data !== null && 
+           (now - this.cache.timestamp) < this.cache.ttl;
   }
 
-  // 獲取快取資料
   static get(): any[] | null {
-    return this.cache.data;
+    return this.isValid() ? this.cache.data : null;
   }
 
-  // 設定快取資料
   static set(data: any[]): void {
     this.cache.data = data;
     this.cache.timestamp = Date.now();
-    this.cache.isInitialized = true;
-    console.log(`💾 快取已更新: ${data.length} 筆記錄`);
   }
 
-  // 手動重整快取
-  static refresh(): void {
-    this.cache.lastRefresh = Date.now();
-    this.clear();
-    console.log('🔄 手動重整快取');
-  }
-
-  // 清除快取
   static clear(): void {
     this.cache.data = null;
     this.cache.timestamp = 0;
-    this.cache.isInitialized = false;
   }
 
-  // 獲取快取年齡
   static getAge(): number {
     return Date.now() - this.cache.timestamp;
   }
-
-  // 獲取快取狀態資訊
-  static getStatus(): {
-    initialized: boolean;
-    hasData: boolean;
-    age: number;
-    isValid: boolean;
-  } {
-    return {
-      initialized: this.cache.isInitialized,
-      hasData: this.cache.data !== null,
-      age: this.getAge(),
-      isValid: this.isValid()
-    };
-  }
 }
 
-// 🔍 智能 Ragic 讀取函式
-async function smartRagicRead(forceRefresh: boolean = false): Promise<{
+// 🔍 優化的 Ragic 讀取函式
+async function optimizedRagicRead(): Promise<{
   success: boolean;
   data?: any[];
   error?: string;
   fromCache?: boolean;
-  cacheStatus?: string;
 }> {
   const startTime = Date.now();
   
   try {
-    // 1. 檢查是否需要強制重整
-    if (forceRefresh) {
-      VehicleDataCache.refresh();
-    }
-
-    // 2. 智能快取策略
-    const cacheStatus = VehicleDataCache.getStatus();
-    console.log('📊 快取狀態:', cacheStatus);
-
-    // 如果已初始化且有有效資料，直接返回快取
-    if (cacheStatus.initialized && cacheStatus.hasData && cacheStatus.isValid && !forceRefresh) {
-      console.log(`⚡ 使用快取資料 (年齡: ${cacheStatus.age}ms)`);
+    // 1. 檢查快取
+    const cachedData = VehicleDataCache.get();
+    if (cachedData) {
+      console.log(`📦 使用快取資料 (快取年齡: ${VehicleDataCache.getAge()}ms)`);
       return {
         success: true,
-        data: VehicleDataCache.get() || [],
-        fromCache: true,
-        cacheStatus: '快取命中'
+        data: cachedData,
+        fromCache: true
       };
     }
 
-    // 3. 需要從 Ragic 讀取資料
-    console.log(`🌐 從 Ragic 讀取資料 (原因: ${forceRefresh ? '手動重整' : '初始載入或快取過期'})`);
-    
-    // 驗證配置
+    // 2. 驗證配置
     validateRagicConfig();
     
     const vehicleConfig = ragicConfig.forms.vehicles;
     const url = `${ragicConfig.baseURL}/${ragicConfig.account}/ragicforms${vehicleConfig.formId}/${vehicleConfig.subtableId}?api&APIKey=${ragicConfig.apiKey}`;
+    
+    console.log('🔄 開始 Ragic 讀取請求');
 
-    // 4. 發送請求 (增強錯誤處理)
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      controller.abort();
-    }, 12000); // 12 秒超時
+    // 3. 發送優化的請求
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json; charset=UTF-8',
+        'Accept-Charset': 'UTF-8',
+        'Cache-Control': 'no-cache',
+        'User-Agent': 'ParkingSearch-Optimized/3.0'
+      },
+      // 添加超時控制
+      signal: AbortSignal.timeout(15000) // 15 秒超時
+    });
 
-    let response: Response;
-    try {
-      response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json; charset=UTF-8',
-          'Accept-Charset': 'UTF-8',
-          'Cache-Control': 'no-cache',
-          'User-Agent': 'ParkingSearch-Smart/4.0'
-        },
-        signal: controller.signal
-      });
-    } finally {
-      clearTimeout(timeoutId);
-    }
-
-    const fetchDuration = Date.now() - startTime;
-    console.log(`📡 Ragic 網路回應: ${response.status} (${fetchDuration}ms)`);
+    const duration = Date.now() - startTime;
+    console.log(`📊 Ragic 回應: ${response.status} (${duration}ms)`);
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    // 5. 解析回應
+    // 4. 解析回應
     const responseText = await response.text();
     
     if (!responseText.trim()) {
-      throw new Error('Ragic 回應內容為空');
+      throw new Error('Ragic 回應為空');
     }
 
     let rawData: any;
     try {
       rawData = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('❌ JSON 解析錯誤:', parseError);
-      console.error('🔍 回應內容預覽:', responseText.substring(0, 200));
-      throw new Error('無法解析 Ragic 回應: JSON 格式錯誤');
+    } catch (error) {
+      throw new Error('JSON 解析失敗: 無效的 Ragic 回應格式');
     }
 
-    // 6. 資料處理和驗證
+    // 5. 資料轉換和標準化
     const processedData = processRagicData(rawData);
     
-    if (processedData.length === 0) {
-      console.warn('⚠️ 處理後的資料為空');
-    }
-
-    // 7. 更新快取
+    // 6. 快取結果
     VehicleDataCache.set(processedData);
     
-    const totalDuration = Date.now() - startTime;
-    console.log(`✅ 資料讀取完成: ${processedData.length} 筆記錄 (總耗時: ${totalDuration}ms)`);
+    console.log(`✅ 成功讀取 ${processedData.length} 筆記錄 (耗時: ${duration}ms)`);
     
     return {
       success: true,
       data: processedData,
-      fromCache: false,
-      cacheStatus: forceRefresh ? '手動重整' : '初始載入'
+      fromCache: false
     };
 
   } catch (error) {
-    const totalDuration = Date.now() - startTime;
-    
-    // 如果是網路錯誤但有舊快取，考慮使用舊快取
-    const cachedData = VehicleDataCache.get();
-    if (cachedData && cachedData.length > 0 && !forceRefresh) {
-      console.warn(`⚠️ 網路錯誤但使用舊快取資料 (耗時: ${totalDuration}ms):`, error);
-      return {
-        success: true,
-        data: cachedData,
-        fromCache: true,
-        cacheStatus: '網路錯誤-使用舊快取'
-      };
-    }
-
-    console.error(`💥 資料讀取失敗 (耗時: ${totalDuration}ms):`, error);
+    const duration = Date.now() - startTime;
+    console.error(`❌ Ragic 讀取失敗 (耗時: ${duration}ms):`, error);
     
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
-      cacheStatus: '讀取失敗'
+      error: error instanceof Error ? error.message : String(error)
     };
   }
 }
@@ -229,6 +145,7 @@ function processRagicData(rawData: any): any[] {
   }
 
   const records: any[] = [];
+  const vehicleConfig = ragicConfig.forms.vehicles;
 
   // 處理 Ragic 的對象格式 (例如: {"0": {...}, "1": {...}})
   Object.entries(rawData).forEach(([key, value]) => {
@@ -314,8 +231,8 @@ function isSubsequenceMatch(text: string, pattern: string): boolean {
   return patternIndex === pattern.length;
 }
 
-// 🚀 智能 GET API 端點
-export async function GET(request: NextRequest): Promise<NextResponse<SmartVehicleResponse>> {
+// 🚀 優化的 GET API 端點
+export async function GET(request: NextRequest): Promise<NextResponse<OptimizedVehicleResponse>> {
   const requestStart = Date.now();
   
   try {
@@ -330,8 +247,14 @@ export async function GET(request: NextRequest): Promise<NextResponse<SmartVehic
     
     console.log('📝 查詢參數:', { query, plate, limit, forceRefresh });
 
-    // 讀取資料 (智能快取策略)
-    const result = await smartRagicRead(forceRefresh);
+    // 強制重新整理時清除快取
+    if (forceRefresh) {
+      VehicleDataCache.clear();
+      console.log('🗑️ 已清除快取');
+    }
+
+    // 讀取資料
+    const result = await optimizedRagicRead();
     
     if (!result.success) {
       return NextResponse.json({
@@ -359,7 +282,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<SmartVehic
 
     const totalTime = Date.now() - requestStart;
     
-    console.log(`✅ 查詢完成 (總耗時: ${totalTime}ms, 策略: ${result.cacheStatus})`);
+    console.log(`✅ 查詢完成 (總耗時: ${totalTime}ms, 快取: ${result.fromCache ? '是' : '否'})`);
 
     return NextResponse.json({
       success: true,
@@ -367,7 +290,6 @@ export async function GET(request: NextRequest): Promise<NextResponse<SmartVehic
       total: result.data?.length || 0,
       filteredCount: originalCount,
       cached: result.fromCache,
-      cacheStatus: result.cacheStatus,
       queryTime: totalTime
     });
 

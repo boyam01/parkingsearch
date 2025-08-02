@@ -78,6 +78,22 @@ export class DataManager {
       return this.cache; // 返回快取資料
     }
   }
+      const hasChanged = JSON.stringify(this.cache) !== JSON.stringify(data);
+      
+      this.cache = data;
+      this.lastUpdate = now;
+      
+      if (hasChanged) {
+        console.log('✅ 資料已更新，通知所有監聽器');
+        this.notifyListeners();
+      }
+      
+      return this.cache;
+    } catch (error) {
+      console.error('❌ 獲取資料失敗:', error);
+      return this.cache; // 返回快取資料
+    }
+  }
 
   /**
    * 獲取快取資料

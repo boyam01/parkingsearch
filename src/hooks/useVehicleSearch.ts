@@ -1,21 +1,23 @@
-'use client';
-
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { VehicleRecord, SearchResult } from '@/types/vehicle';
+/**
+ * Vehicle Search Hook
+ * Provides high-performance vehicle search functionality with Trie search, cache management and offline support
+ */
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { VehicleRecord } from '@/types/vehicle';
 import { VehicleTrie } from '@/lib/trie';
-import { VehicleCache, IndexedDBCache } from '@/lib/cache';
-import { VehicleAPI } from '@/lib/api';
-import { debounce, sortVehicleRecords } from '@/lib/utils';
+import { VehicleCache } from '@/lib/cache';
+import { dataManager } from '@/lib/data-manager';
 
 export interface UseVehicleSearchOptions {
   enableCache?: boolean;
   enableOfflineSearch?: boolean;
   debounceDelay?: number;
   maxResults?: number;
+  initialQuery?: string;
 }
 
-export interface UseVehicleSearchReturn {
-  // 搜尋狀態
+export interface UseVehicleSearchResult {
+  // Search state
   query: string;
   setQuery: (query: string) => void;
   results: VehicleRecord[];
@@ -23,156 +25,108 @@ export interface UseVehicleSearchReturn {
   isError: boolean;
   error: string | null;
   searchTime: number;
-
-  // 資料狀態
+  
+  // Data state
   allVehicles: VehicleRecord[];
   isDataLoaded: boolean;
-  isCacheEnabled: boolean;
-
-  // 搜尋控制
-  search: (query: string) => Promise<void>;
-  clearResults: () => void;
-  refreshData: () => Promise<void>;
-
-  // 統計資訊
   totalRecords: number;
+  
+  // Cache state
+  isCacheEnabled: boolean;
   cacheStats: {
     size: number;
+    lastUpdate: Date | null;
+    hitRate: number;
     maxSize: number;
     maxAge: number;
   };
+  
+  // Methods
+  search: (searchQuery: string) => void;
+  clearResults: () => void;
+  refreshData: () => Promise<void>;
 }
 
-export function useVehicleSearch(options: UseVehicleSearchOptions = {}): UseVehicleSearchReturn {
+export function useVehicleSearch(options: UseVehicleSearchOptions = {}): UseVehicleSearchResult {
   const {
     enableCache = true,
     enableOfflineSearch = true,
     debounceDelay = 300,
-    maxResults = 50
+    maxResults = 100,
+    initialQuery = ''
   } = options;
 
-  // 狀態管理
-  const [query, setQuery] = useState('');
+  // Basic state
+  const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<VehicleRecord[]>([]);
-  const [allVehicles, setAllVehicles] = useState<VehicleRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTime, setSearchTime] = useState(0);
+  const [allVehicles, setAllVehicles] = useState<VehicleRecord[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  // 初始化搜尋引擎和快取
-  const trie = useMemo(() => new VehicleTrie(), []);
-  const cache = useMemo(() => VehicleCache.getInstance(), []);
-  const indexedCache = useMemo(() => new IndexedDBCache(), []);
+  // Refs
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchTrieRef = useRef<VehicleTrie | null>(null);
+  const cacheRef = useRef<VehicleCache | null>(null);
 
-  // 載入車輛資料
-  const loadVehicleData = useCallback(async () => {
-    if (isDataLoaded) return;
+  // Initialize cache and Trie
+  useEffect(() => {
+    if (enableCache) {
+      cacheRef.current = VehicleCache.getInstance();
+    }
+    searchTrieRef.current = new VehicleTrie();
+  }, [enableCache]);
 
-    setIsLoading(true);
-    setError(null);
-
+  // Load initial data
+  const loadInitialData = useCallback(async () => {
     try {
-      let vehicles: VehicleRecord[] = [];
+      setIsLoading(true);
+      setError(null);
 
-      // 嘗試從快取載入
-      if (enableCache) {
-        const cachedVehicles = cache.getCachedVehicles();
-        if (cachedVehicles && cache.isCacheValid()) {
-          vehicles = cachedVehicles;
-        } else if (enableOfflineSearch) {
-          vehicles = await indexedCache.loadVehicles();
-        }
-      }
-
-      // 如果快取沒有資料或過期，從 API 載入
-      if (vehicles.length === 0) {
-        vehicles = await VehicleAPI.getAllVehicles();
-        
-        // 儲存到快取
-        if (enableCache && vehicles.length > 0) {
-          cache.cacheVehicles(vehicles);
-          if (enableOfflineSearch) {
-            await indexedCache.saveVehicles(vehicles);
-          }
-        }
-      }
-
-      // 建立搜尋索引
-      trie.clear();
-      vehicles.forEach(vehicle => trie.insert(vehicle));
-
-      setAllVehicles(vehicles);
+      console.log('Loading vehicle data...');
+      const data = await dataManager.refreshData();
+      
+      setAllVehicles(data);
       setIsDataLoaded(true);
+
+      // Build search index
+      if (searchTrieRef.current) {
+        console.log('Building search index...');
+        const trie = new VehicleTrie();
+        data.forEach(vehicle => trie.insert(vehicle));
+        searchTrieRef.current = trie;
+      }
+
+      console.log(`Loaded ${data.length} vehicle records`);
+      
     } catch (err) {
+      console.error('Failed to load data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load data');
       setIsError(true);
-      setError(err instanceof Error ? err.message : '載入資料失敗');
     } finally {
       setIsLoading(false);
     }
-  }, [enableCache, enableOfflineSearch, cache, indexedCache, trie, isDataLoaded]);
-
-  // 正規化函數 - 移除空格、破折號並轉大寫
-  const normalizeString = useCallback((str: string): string => {
-    if (!str) return '';
-    return str.replace(/[\s\-]/g, '').toUpperCase();
   }, []);
 
-  // 產生子序列正則表達式
-  const createSubsequenceRegex = useCallback((query: string): RegExp => {
-    if (!query) return /^$/;
-    
-    // 正規化查詢字串
-    const normalizedQuery = normalizeString(query);
-    
-    // 將每個字符用 .* 連接，形成子序列匹配模式
-    // 例如: "BC" -> "B.*C", "ABC" -> "A.*B.*C"
-    const regexPattern = normalizedQuery
-      .split('')
-      .map(char => char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) // 轉義特殊字符
-      .join('.*');
-    
-    return new RegExp(regexPattern, 'i');
-  }, [normalizeString]);
+  // Listen for data manager updates
+  useEffect(() => {
+    const handleDataUpdate = () => {
+      console.log('Data updated, reloading...');
+      loadInitialData();
+    };
 
-  // 增強的子序列模糊搜尋功能
-  const performSubsequenceSearch = useCallback((searchQuery: string, vehicles: VehicleRecord[]): VehicleRecord[] => {
-    if (!searchQuery || searchQuery.length === 0) return [];
+    const unsubscribe = dataManager.subscribe(handleDataUpdate);
     
-    const regex = createSubsequenceRegex(searchQuery);
-    
-    return vehicles.filter(vehicle => {
-      // 搜尋所有可能的欄位
-      const searchableFields = [
-        vehicle.plate,
-        vehicle.applicantName,
-        vehicle.vehicleType,
-        vehicle.brand || '',
-        vehicle.color || '',
-        vehicle.department || '',
-        vehicle.identityType,
-        vehicle.contactPhone,
-        vehicle.notes || '',
-        vehicle.visitPurpose || ''
-      ];
-      
-      // 對每個欄位進行正規化後用正則表達式匹配
-      return searchableFields.some(field => {
-        if (!field) return false;
-        const normalizedField = normalizeString(field);
-        return regex.test(normalizedField);
-      });
-    });
-  }, [createSubsequenceRegex, normalizeString]);
+    // Initial load
+    loadInitialData();
 
-  // 增強的單字模糊搜尋功能 - 現在使用子序列搜尋
-  const performSingleCharacterSearch = useCallback((searchQuery: string, vehicles: VehicleRecord[]): VehicleRecord[] => {
-    return performSubsequenceSearch(searchQuery, vehicles);
-  }, [performSubsequenceSearch]);
+    return unsubscribe;
+  }, [loadInitialData]);
 
-  // 執行搜尋
-  const performSearch = useCallback(async (searchQuery: string) => {
+  // Search logic
+  const performSearch = useCallback((searchQuery: string) => {
     if (!searchQuery.trim()) {
       setResults([]);
       setSearchTime(0);
@@ -180,171 +134,197 @@ export function useVehicleSearch(options: UseVehicleSearchOptions = {}): UseVehi
     }
 
     const startTime = performance.now();
-    setIsLoading(true);
-
+    
     try {
+      setIsLoading(true);
+      setError(null);
+      setIsError(false);
+
       let searchResults: VehicleRecord[] = [];
 
-      if (isDataLoaded && allVehicles.length > 0) {
-        // 本地搜尋 - 統一使用子序列模糊搜尋
-        searchResults = performSubsequenceSearch(searchQuery, allVehicles);
-        
-        // 如果子序列搜尋結果太少，回退到傳統搜尋方法
-        if (searchResults.length === 0 && searchQuery.length > 3) {
-          // 使用字首樹模糊搜尋作為備案
-          searchResults = trie.fuzzySearch(searchQuery);
-        }
+      // Use Trie search
+      if (searchTrieRef.current && enableOfflineSearch) {
+        console.log('Using Trie search:', searchQuery);
+        searchResults = searchTrieRef.current.search(searchQuery);
       } else {
-        // API 搜尋
-        searchResults = await VehicleAPI.searchVehicles(searchQuery);
+        // Fallback: simple string matching
+        console.log('Using simple search:', searchQuery);
+        const queryLower = searchQuery.toLowerCase();
+        searchResults = allVehicles.filter(vehicle => 
+          vehicle.plate.toLowerCase().includes(queryLower) ||
+          vehicle.applicantName?.toLowerCase().includes(queryLower) ||
+          vehicle.contactPhone?.includes(searchQuery) ||
+          vehicle.department?.toLowerCase().includes(queryLower)
+        );
       }
 
-      // 排序結果
-      searchResults = sortVehicleRecords(searchResults, 'relevance', 'desc', searchQuery);
-
-      // 限制結果數量
-      if (searchResults.length > maxResults) {
+      // Limit results
+      if (maxResults > 0) {
         searchResults = searchResults.slice(0, maxResults);
       }
 
+      const endTime = performance.now();
+      const duration = Math.round(endTime - startTime);
+      
       setResults(searchResults);
-      setIsError(false);
-      setError(null);
+      setSearchTime(duration);
+      
+      console.log(`Search completed: ${searchResults.length} results in ${duration}ms`);
+
+      // Cache search results
+      if (enableCache && cacheRef.current) {
+        cacheRef.current.set(`search:${searchQuery}`, {
+          results: searchResults,
+          timestamp: Date.now(),
+          searchTime: duration
+        });
+      }
+
     } catch (err) {
+      console.error('Search failed:', err);
+      setError(err instanceof Error ? err.message : 'Search failed');
       setIsError(true);
-      setError(err instanceof Error ? err.message : '搜尋失敗');
       setResults([]);
     } finally {
-      const endTime = performance.now();
-      setSearchTime(endTime - startTime);
       setIsLoading(false);
     }
-  }, [isDataLoaded, allVehicles, trie, maxResults, performSubsequenceSearch]);
+  }, [allVehicles, enableOfflineSearch, enableCache, maxResults]);
 
-  // 防抖搜尋
-  const debouncedSearch = useMemo(
-    () => debounce(performSearch, debounceDelay),
-    [performSearch, debounceDelay]
-  );
+  // Debounced search
+  const debouncedSearch = useCallback((searchQuery: string) => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
 
-  // 搜尋函式
-  const search = useCallback(async (searchQuery: string) => {
+    debounceTimeoutRef.current = setTimeout(() => {
+      performSearch(searchQuery);
+    }, debounceDelay);
+  }, [performSearch, debounceDelay]);
+
+  // Search method
+  const search = useCallback((searchQuery: string) => {
     setQuery(searchQuery);
     
-    if (searchQuery.trim()) {
-      await debouncedSearch(searchQuery);
+    if (debounceDelay > 0) {
+      debouncedSearch(searchQuery);
     } else {
-      setResults([]);
-      setSearchTime(0);
+      performSearch(searchQuery);
     }
-  }, [debouncedSearch]);
+  }, [debouncedSearch, performSearch, debounceDelay]);
 
-  // 清除搜尋結果
+  // Set query and trigger search
+  const handleSetQuery = useCallback((newQuery: string) => {
+    search(newQuery);
+  }, [search]);
+
+  // Clear search results
   const clearResults = useCallback(() => {
     setQuery('');
     setResults([]);
     setSearchTime(0);
     setError(null);
     setIsError(false);
+    
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
   }, []);
 
-  // 重新整理資料
+  // Refresh data - 簡化版本，直接調用 API 強制刷新
   const refreshData = useCallback(async () => {
-    setIsDataLoaded(false);
-    if (enableCache) {
-      cache.clear();
-      if (enableOfflineSearch) {
-        await indexedCache.clear();
-      }
-    }
-    await loadVehicleData();
-  }, [enableCache, enableOfflineSearch, cache, indexedCache, loadVehicleData]);
+    console.log('🔄 用戶手動重新整理，強制從 RAGIC 重新讀取...');
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      setIsError(false);
 
-  // 當查詢字串改變時執行搜尋
-  useEffect(() => {
-    if (query) {
-      performSearch(query);
-    } else {
-      setResults([]);
-      setSearchTime(0);
+      // 直接調用 API 強制刷新，不依賴 data-manager 的複雜邏輯
+      const { VehicleAPI } = await import('@/lib/api');
+      const data = await VehicleAPI.getAllVehicles({ forceRefresh: true });
+      
+      console.log(`📡 從 RAGIC 獲取到 ${data.length} 筆資料`);
+      
+      setAllVehicles(data);
+      setIsDataLoaded(true);
+
+      // 重建搜尋索引
+      if (searchTrieRef.current) {
+        console.log('🌲 重建搜尋索引...');
+        const trie = new VehicleTrie();
+        data.forEach(vehicle => trie.insert(vehicle));
+        searchTrieRef.current = trie;
+      }
+
+      // 如果有查詢，重新搜尋
+      if (query.trim()) {
+        performSearch(query);
+      }
+
+      console.log(`✅ 手動重整完成！已載入 ${data.length} 筆最新資料`);
+      
+    } catch (err) {
+      console.error('❌ 手動重整失敗:', err);
+      setError(err instanceof Error ? err.message : '重整資料失敗');
+      setIsError(true);
+    } finally {
+      setIsLoading(false);
     }
   }, [query, performSearch]);
 
-  // 初始化載入資料
-  useEffect(() => {
-    loadVehicleData();
-  }, [loadVehicleData]);
-
-  // 載入快取配置
-  useEffect(() => {
-    if (enableCache) {
-      cache.loadFromLocalStorage();
+  // Cache stats
+  const cacheStats = useMemo(() => {
+    if (!enableCache || !cacheRef.current) {
+      return {
+        size: 0,
+        lastUpdate: null,
+        hitRate: 0,
+        maxSize: 1000,
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      };
     }
-  }, [enableCache, cache]);
+
+    const stats = cacheRef.current.getStats();
+    return {
+      size: stats.size,
+      lastUpdate: new Date(), // Simplified version
+      hitRate: 0, // Simplified version
+      maxSize: stats.maxSize,
+      maxAge: stats.maxAge
+    };
+  }, [enableCache, results]);
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return {
-    // 搜尋狀態
+    // Search state
     query,
-    setQuery,
+    setQuery: handleSetQuery,
     results,
     isLoading,
     isError,
     error,
     searchTime,
-
-    // 資料狀態
+    
+    // Data state
     allVehicles,
     isDataLoaded,
+    totalRecords: allVehicles.length,
+    
+    // Cache state
     isCacheEnabled: enableCache,
-
-    // 搜尋控制
+    cacheStats,
+    
+    // Methods
     search,
     clearResults,
-    refreshData,
-
-    // 統計資訊
-    totalRecords: allVehicles.length,
-    cacheStats: cache.getStats()
-  };
-}
-
-// Hook for single vehicle query
-export function useVehicleQuery(plate?: string) {
-  const [vehicle, setVehicle] = useState<VehicleRecord | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isError, setIsError] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchVehicle = useCallback(async (plateNumber: string) => {
-    if (!plateNumber) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const result = await VehicleAPI.getVehicleByPlate(plateNumber);
-      setVehicle(result);
-      setIsError(false);
-    } catch (err) {
-      setIsError(true);
-      setError(err instanceof Error ? err.message : '查詢失敗');
-      setVehicle(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (plate) {
-      fetchVehicle(plate);
-    }
-  }, [plate, fetchVehicle]);
-
-  return {
-    vehicle,
-    isLoading,
-    isError,
-    error,
-    refetch: () => plate && fetchVehicle(plate)
+    refreshData
   };
 }
