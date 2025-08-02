@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Share2, Printer, AlertCircle, CheckCircle, Clock, X } from 'lucide-react';
 import { VehicleCard } from '@/components/VehicleCard';
-import { useVehicleQuery } from '@/hooks/useVehicleSearch';
+import { useVehicleSearch } from '@/hooks/useVehicleSearch';
 import { VehicleRecord } from '@/types/vehicle';
 import { cn, formatPlate } from '@/lib/utils';
 
@@ -21,11 +21,12 @@ export function VehicleQueryPage({
   className
 }: VehicleQueryPageProps) {
   const router = useRouter();
-  const { vehicle, isLoading, isError, error, refetch } = useVehicleQuery(plate);
+  const { allVehicles, isLoading, isError, error, refreshData } = useVehicleSearch();
   const [showShareMenu, setShowShareMenu] = useState(false);
 
-  // 使用初始資料或查詢結果
-  const currentVehicle = initialVehicle || vehicle;
+  // 從所有車輛中找到對應車牌的車輛
+  const vehicle = allVehicles.find(v => v.plate === plate) || initialVehicle;
+  const currentVehicle = vehicle;
   const formattedPlate = formatPlate(plate);
 
   // 設定頁面標題
@@ -168,7 +169,7 @@ export function VehicleQueryPage({
                 {error || '無法載入車輛資訊，請稍後再試。'}
               </p>
               <button
-                onClick={refetch}
+                onClick={refreshData}
                 className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
               >
                 重新查詢
@@ -239,7 +240,7 @@ export function VehicleQueryPage({
                 重新搜尋
               </Link>
               <button
-                onClick={refetch}
+                onClick={refreshData}
                 className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
               >
                 重新查詢
