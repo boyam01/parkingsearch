@@ -33,9 +33,9 @@ function getRequiredEnv(key: string): string {
 
 // 🚗 車輛表單配置
 const VEHICLE_FORM_CONFIG: RagicFormConfig = {
-  formId: getRequiredEnv('RAGIC_FORM_ID'),
-  subtableId: getRequiredEnv('RAGIC_SUBTABLE_ID'),
-  writeSubtableId: process.env.RAGIC_WRITE_SUBTABLE_ID || getRequiredEnv('RAGIC_SUBTABLE_ID'),
+  formId: getRequiredEnv('NEXT_PUBLIC_RAGIC_FORM_ID'),
+  subtableId: getRequiredEnv('NEXT_PUBLIC_RAGIC_SUBTABLE_ID'),
+  writeSubtableId: process.env.NEXT_PUBLIC_RAGIC_WRITE_SUBTABLE_ID || getRequiredEnv('NEXT_PUBLIC_RAGIC_SUBTABLE_ID'),
   
   // 本地欄位 -> Ragic 欄位 ID 對應 (已更正)
   fieldMapping: {
@@ -82,9 +82,9 @@ const VEHICLE_FORM_CONFIG: RagicFormConfig = {
 
 // 🏗️ 主要配置物件
 export const ragicConfig: RagicConfig = {
-  baseURL: getRequiredEnv('RAGIC_BASE_URL'),
-  account: getRequiredEnv('RAGIC_ACCOUNT'),
-  apiKey: getRequiredEnv('RAGIC_API_KEY'),
+  baseURL: getRequiredEnv('NEXT_PUBLIC_RAGIC_BASE_URL'),
+  account: getRequiredEnv('NEXT_PUBLIC_RAGIC_ACCOUNT'),
+  apiKey: getRequiredEnv('NEXT_PUBLIC_RAGIC_API_KEY'),
   forms: {
     vehicles: VEHICLE_FORM_CONFIG,
     // 未來可擴展其他表單
@@ -187,9 +187,9 @@ export class RagicDataTransformer {
 export function validateRagicConfig(): void {
   try {
     // 驗證基本配置
-    if (!ragicConfig.baseURL) throw new Error('RAGIC_BASE_URL 未設定');
-    if (!ragicConfig.account) throw new Error('RAGIC_ACCOUNT 未設定');
-    if (!ragicConfig.apiKey) throw new Error('RAGIC_API_KEY 未設定');
+    if (!ragicConfig.baseURL) throw new Error('NEXT_PUBLIC_RAGIC_BASE_URL 未設定');
+    if (!ragicConfig.account) throw new Error('NEXT_PUBLIC_RAGIC_ACCOUNT 未設定');
+    if (!ragicConfig.apiKey) throw new Error('NEXT_PUBLIC_RAGIC_API_KEY 未設定');
     
     // 驗證表單配置
     Object.entries(ragicConfig.forms).forEach(([formKey, config]) => {

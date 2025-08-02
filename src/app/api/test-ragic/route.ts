@@ -16,8 +16,8 @@ export async function POST(request: NextRequest) {
     
     if (action === 'test-connection' && apiKey) {
       // 臨時設定 API Key 進行測試（使用新的環境變數名稱）
-      const originalApiKey = process.env.RAGIC_API_KEY;
-      (process.env as any).RAGIC_API_KEY = apiKey;
+      const originalApiKey = process.env.NEXT_PUBLIC_RAGIC_API_KEY;
+      (process.env as any).NEXT_PUBLIC_RAGIC_API_KEY = apiKey;
       
       try {
         // 測試 Ragic API 連接
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
         
         // 恢復原本的 API Key
         if (originalApiKey) {
-          (process.env as any).RAGIC_API_KEY = originalApiKey;
+          (process.env as any).NEXT_PUBLIC_RAGIC_API_KEY = originalApiKey;
         }
         
         return NextResponse.json({
