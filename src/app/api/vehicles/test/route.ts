@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { testRagicConnection } from '@/utils/ragicRequest';
-import { debugRagicConfig, validateRagicConfig } from '@/config/ragicConfig';
 
 // GET /api/vehicles/test - 測試 Ragic 連線
 export async function GET(request: NextRequest) {
   try {
     console.log('=== 開始 Ragic 連線測試 ===');
+    
+    // 動態導入配置，避免構建時就執行
+    const { debugRagicConfig, validateRagicConfig } = await import('@/config/ragicConfig');
     
     // 顯示配置資訊
     debugRagicConfig();

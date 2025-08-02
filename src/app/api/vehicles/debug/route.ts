@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ragicConfig, RagicDataTransformer } from '@/config/ragicConfig';
 
 // GET /api/vehicles/debug - 診斷配置和欄位映射
 export async function GET(request: NextRequest) {
   try {
+    // 動態導入配置
+    const { ragicConfig, RagicDataTransformer } = await import('@/config/ragicConfig');
+    
     const vehicleConfig = ragicConfig.forms.vehicles;
     
     // 準備診斷資訊

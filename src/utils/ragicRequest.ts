@@ -1,8 +1,6 @@
 // 🔄 Ragic 動態請求工具
 // 統一處理所有 Ragic API 請求，包含重試機制和詳細日誌
 
-import { ragicConfig, RagicDataTransformer } from '@/config/ragicConfig';
-
 export interface RagicRequestOptions {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE';
   formKey: string;           // 表單配置鍵值（如 'vehicles'）

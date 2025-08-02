@@ -126,6 +126,9 @@ async function smartRagicRead(forceRefresh: boolean = false): Promise<{
     // 3. 需要從 Ragic 讀取資料
     console.log(`🌐 從 Ragic 讀取資料 (原因: ${forceRefresh ? '手動重整' : '初始載入或快取過期'})`);
     
+    // 動態導入配置，避免構建時執行
+    const { ragicConfig, validateRagicConfig } = await import('@/config/ragicConfig');
+    
     // 驗證配置
     validateRagicConfig();
     
@@ -233,19 +236,32 @@ function processRagicData(rawData: any): any[] {
   // 處理 Ragic 的對象格式 (例如: {"0": {...}, "1": {...}})
   Object.entries(rawData).forEach(([key, value]) => {
     if (value && typeof value === 'object' && '_ragicId' in value) {
-      // 轉換 Ragic 格式到本地格式
+      // 直接轉換資料格式，不依賴 RagicDataTransformer
       try {
-        const localRecord = RagicDataTransformer.fromRagicFormat('vehicles', value);
+        const record = value as any;
+        
+        // 手動轉換關鍵欄位
+        const localRecord = {
+          plate: record['車牌號碼'] || record['1003984'] || '',
+          applicantName: record['申請人姓名'] || record['1003990'] || '',
+          vehicleType: record['車輛類型'] || record['1003988'] || '',
+          contactPhone: record['聯絡電話'] || record['1003992'] || '',
+          applicationDate: record['申請日期'] || record['1003994'] || '',
+          visitTime: record['到訪時間'] || record['1003986'] || '',
+          identityType: record['身份類別'] || record['1003989'] || '',
+          brand: record['車輛品牌'] || record['1003991'] || '',
+          department: record['部門'] || record['1003995'] || ''
+        };
         
         // 添加額外的系統欄位
         const processedRecord = {
           id: key,
-          _ragicId: (value as any)._ragicId,
-          _timestamp: (value as any)._dataTimestamp,
+          _ragicId: record._ragicId,
+          _timestamp: record._dataTimestamp,
           ...localRecord,
           // 確保關鍵欄位存在
-          plate: localRecord.plate || (value as any)['車牌號碼'] || '',
-          applicantName: localRecord.applicantName || (value as any)['申請人姓名'] || '',
+          plate: localRecord.plate || '',
+          applicantName: localRecord.applicantName || '',
           vehicleType: localRecord.vehicleType || (value as any)['車輛類型'] || '',
           contactPhone: localRecord.contactPhone || (value as any)['聯絡電話'] || '',
           applicationDate: localRecord.applicationDate || (value as any)['申請日期'] || ''
@@ -389,6 +405,8 @@ export async function POST(request: NextRequest) {
   try {
     console.log('=== POST /api/vehicles 開始 ===');
     
+    // 動態導入配置
+    const { validateRagicConfig } = await import('@/config/ragicConfig');
     validateRagicConfig();
     
     const body = await request.json();
